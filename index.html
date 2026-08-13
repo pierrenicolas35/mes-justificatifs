@@ -37,13 +37,13 @@
             height: 100%;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text-dark);
             overflow: hidden;
         }
 
-        /* Système de vues Écran Plein (UX Multi-Pages) */
+        /* Vues Plein Écran (Stepper) */
         .app-view {
             display: none;
             flex-direction: column;
@@ -58,8 +58,8 @@
         }
         .app-view.active { display: flex; }
 
-        /* En-tête */
-        .header { text-align: center; margin-bottom: 12px; width: 100%; flex-shrink: 0; }
+        /* En-tête & Barre de Progression */
+        .header { text-align: center; margin-bottom: 8px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 4px 0; font-size: 1.2rem; color: #1a252f; }
         .badge-secu { 
             display: inline-flex;
@@ -74,9 +74,27 @@
             border: 1px solid #c8e6c9;
         }
 
+        .stepper-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+        .stepper-dots { display: flex; gap: 6px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #ced4da; }
+        .dot.active { background: var(--primary); transform: scale(1.2); }
+
         .panel {
             background: var(--panel);
-            padding: 12px;
+            padding: 14px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             border: 1px solid var(--border);
@@ -85,33 +103,34 @@
             width: 100%;
         }
 
-        /* VUE 1 : ACCUEIL & IMPORT */
+        /* VUE 1 : ACCUEIL IMPORTATION */
         .import-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin: auto 0;
+            margin: 20px 0;
         }
         .btn-import-option {
             background: #ffffff;
             border: 2px solid var(--border);
             border-radius: 16px;
-            padding: 30px 10px;
+            padding: 25px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
             cursor: pointer;
             font-weight: 700;
             font-size: 0.9rem;
             color: #2c3e50;
             box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            text-align: center;
         }
         .btn-import-option:active { transform: scale(0.96); border-color: var(--primary); background: #eef4fc; }
-        .btn-import-option img { width: 56px; height: 56px; object-fit: contain; }
+        .btn-import-option img { width: 52px; height: 52px; object-fit: contain; }
 
-        /* VUE 2 : RECADRAGE PLEIN ÉCRAN MAXIMISÉ */
+        /* VUE 2 : RECADRAGE FULLSCREEN */
         .fullscreen-crop-wrapper {
             position: relative;
             width: 100%;
@@ -126,10 +145,10 @@
         }
         #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
 
-        /* VUE 3 : APERÇU ET EXPORT */
+        /* VUE 3 : APERÇU ET REGLAGES */
         .preview-wrapper {
             width: 100%; 
-            height: 40vh;
+            height: 35vh;
             background: #e9ecef;
             overflow: auto;
             border-radius: 8px; 
@@ -142,18 +161,18 @@
         }
         #result-canvas { display: block; max-width: 100%; max-height: 100%; object-fit: contain; background: white; }
 
-        /* Queue Multi-Pages */
+        /* Queue Multi-Pages (Vignettes) */
         .page-queue-container {
             background: #f8f9fa;
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 8px;
+            padding: 10px;
             margin-bottom: 10px;
         }
-        .queue-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; }
-        .queue-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; min-height: 60px; }
+        .queue-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+        .queue-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; min-height: 55px; }
         .thumb-item {
-            position: relative; flex-shrink: 0; width: 45px; height: 58px;
+            position: relative; flex-shrink: 0; width: 42px; height: 54px;
             border: 2px solid var(--primary); border-radius: 4px; overflow: hidden; background: white;
         }
         .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
@@ -163,7 +182,7 @@
             display: flex; align-items: center; justify-content: center; font-weight: bold;
         }
 
-        /* Indicateurs & Métadonnées */
+        /* Quality Indicators & Form */
         .qc-bar {
             display: flex; align-items: center; justify-content: space-between;
             background: #f8f9fa; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
@@ -187,30 +206,41 @@
         }
         .input-field { display: flex; flex-direction: column; gap: 3px; }
         .input-field label { font-size: 0.75rem; font-weight: 700; }
-        .input-field input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
+        .input-field input { padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
 
-        /* Controls & Boutons */
-        .controls-row { display: flex; gap: 8px; width: 100%; flex-shrink: 0; }
+        /* Navigation & Buttons */
+        .nav-buttons-row { display: flex; gap: 8px; width: 100%; flex-shrink: 0; margin-top: auto; }
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         .btn-action-color {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             gap: 6px; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
-            background: white; font-size: 0.8rem; font-weight: 700; color: var(--text-dark); cursor: pointer;
+            background: white; font-size: 0.82rem; font-weight: 700; color: var(--text-dark); cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
+        .btn-action-color:active { transform: scale(0.97); background: #f8f9fa; }
         .btn-action-color img { width: 36px; height: 36px; object-fit: contain; }
 
         button {
             display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            background-color: var(--primary); color: white; border: none; padding: 10px;
-            border-radius: 8px; font-weight: 600; font-size: 0.85rem; min-height: 44px; flex: 1;
+            background-color: var(--primary); color: white; border: none; padding: 12px 10px;
+            border-radius: 8px; font-weight: 700; font-size: 0.88rem; min-height: 46px; flex: 1;
             cursor: pointer;
         }
+        button:active { transform: scale(0.98); }
         button.secondary { background-color: #6c757d; }
         button.success { background-color: var(--success); }
-        button.icon-btn-compact { flex: 0; min-width: 44px; padding: 0; }
-        button svg { width: 20px; height: 20px; fill: currentColor; }
+        button.icon-btn-tool {
+            flex: 0;
+            min-width: 44px;
+            height: 44px;
+            padding: 0;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #333;
+        }
+        button.icon-btn-tool svg { width: 22px; height: 22px; fill: #0056b3; }
 
         .footer { margin-top: auto; padding-top: 8px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-align: center; }
     </style>
@@ -221,19 +251,32 @@
     <div id="view-import" class="app-view active">
         <div class="header">
             <h2>Optimisation des justificatifs</h2>
-            <span class="badge-secu">Traitement 100% Local (Client-Side)</span>
+            <span class="badge-secu">Traitement 100% Local (Confidentiel)</span>
+        </div>
+
+        <div class="stepper-bar">
+            <span>Étape 1 : Choisir la photo</span>
+            <div class="stepper-dots">
+                <div class="dot active"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
         </div>
 
         <div style="margin: auto 0; width: 100%;">
-            <p style="text-align: center; font-weight: 700; color: #2c3e50; margin-bottom: 15px;">Sélectionnez une source pour numériser :</p>
+            <p style="text-align: center; font-weight: 700; color: #2c3e50; margin-bottom: 10px; font-size: 0.95rem;">
+                Comment souhaitez-vous ajouter votre document ?
+            </p>
             <div class="import-grid">
                 <div class="btn-import-option" onclick="triggerInput('camera')">
-                    <img src="https://cdn-icons-png.flaticon.com/512/685/685655.png" alt="Appareil Photo">
-                    <span>Appareil Photo</span>
+                    <!-- Flaticon Appareil Photo HD -->
+                    <img src="https://cdn-icons-png.flaticon.com/512/3004/3004613.png" alt="Appareil Photo">
+                    <span>Prendre une photo</span>
                 </div>
                 <div class="btn-import-option" onclick="triggerInput('gallery')">
+                    <!-- Flaticon Galerie HD -->
                     <img src="https://cdn-icons-png.flaticon.com/512/1375/1375106.png" alt="Galerie">
-                    <span>Galerie Photo</span>
+                    <span>Choisir en galerie</span>
                 </div>
             </div>
         </div>
@@ -244,8 +287,17 @@
         <div class="footer">Application développée par P.NICOLAS</div>
     </div>
 
-    <!-- ================= VUE 2 : RECADRAGE MAXIMISÉ (FULLSCREEN) ================= -->
+    <!-- ================= VUE 2 : RECADRAGE GUIDÉ ================= -->
     <div id="view-crop" class="app-view">
+        <div class="stepper-bar">
+            <span>Étape 2 : Ajuster les coins du document</span>
+            <div class="stepper-dots">
+                <div class="dot"></div>
+                <div class="dot active"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+
         <div class="qc-bar" style="margin-bottom: 6px;">
             <div>Netteté : <strong id="sqc-sharpness-val">--</strong> | Lumière : <strong id="sqc-brightness-val">--</strong></div>
             <span id="sqc-badge" class="qc-status qc-optimal">Diag</span>
@@ -253,49 +305,51 @@
 
         <div id="source-alert-banner"></div>
 
-        <!-- Zone de recadrage occupant tout l'espace central -->
+        <!-- Zone de recadrage plein écran -->
         <div class="fullscreen-crop-wrapper">
             <canvas id="source-canvas"></canvas>
         </div>
 
-        <!-- Barre d'outils bas de page pour le recadrage -->
-        <div class="controls-row">
-            <button type="button" class="secondary icon-btn-compact" onclick="rotateSource(-90)" title="Pivoter Gauche">
+        <!-- Barre d'outils bas de page -->
+        <div class="nav-buttons-row">
+            <!-- Pivoter Gauche SVG Net -->
+            <button type="button" class="icon-btn-tool" onclick="rotateSource(-90)" title="Pivoter à gauche">
                 <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.52-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.63 3.89l1.41-1.42c-.52-.75-.9-1.6-1.02-2.47zM12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8z"/></svg>
             </button>
-            <button type="button" class="secondary icon-btn-compact" onclick="rotateSource(90)" title="Pivoter Droite">
+            
+            <!-- Pivoter Droite SVG Net -->
+            <button type="button" class="icon-btn-tool" onclick="rotateSource(90)" title="Pivoter à droite">
                 <svg viewBox="0 0 24 24"><path d="M15.55 5.55L14.14 7c.52.75.9 1.6 1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.92zM12 4c4.42 0 8 3.58 8 8 0 1.57-.46 3.03-1.24 4.26l-1.46-1.46c.45-.83.7-1.79.7-2.8 0-3.31-2.69-6-6-6v3L8 5l4-4v3zm5.19 11.47c-.5.75-.88 1.6-1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.89l-1.37 1.42zM12 20c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 9.74C4.46 10.97 4 12.43 4 14c0 4.42 3.58 8 8 8v-3l4 4-4 4v-3z"/></svg>
             </button>
             
-            <!-- Icône d'actualisation au lieu de 'Reset coins' -->
-            <button type="button" class="secondary icon-btn-compact" onclick="resetPoints()" title="Réinitialiser les coins">
+            <!-- Actualiser / Reset coins SVG Net -->
+            <button type="button" class="icon-btn-tool" onclick="resetPoints()" title="Réinitialiser les coins">
                 <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             </button>
 
-            <!-- Boutons photo/galerie rapides pour remplacer l'image -->
-            <button type="button" class="secondary icon-btn-compact" onclick="triggerInput('camera')" title="Reprendre photo">
-                <img src="https://cdn-icons-png.flaticon.com/512/685/685655.png" style="width:22px; height:22px;">
-            </button>
-            <button type="button" class="secondary icon-btn-compact" onclick="triggerInput('gallery')" title="Ouvrir galerie">
-                <img src="https://cdn-icons-png.flaticon.com/512/1375/1375106.png" style="width:22px; height:22px;">
+            <button type="button" class="secondary" style="flex:0; padding:0 12px;" onclick="switchView('view-import')">
+                ← Retour
             </button>
 
             <button type="button" class="success" onclick="triggerManualWarp()">
-                Valider
-                <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                Valider ➔
             </button>
         </div>
     </div>
 
     <!-- ================= VUE 3 : APERÇU, REGLAGES & EXPORT ================= -->
     <div id="view-preview" class="app-view">
-        <div class="panel">
-            <div class="step-header">
-                <div class="step-number">2</div>
-                <h3 class="step-title">Contraste & Téléchargement</h3>
+        <div class="stepper-bar">
+            <span>Étape 3 : Vérifier et télécharger</span>
+            <div class="stepper-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot active"></div>
             </div>
+        </div>
 
-            <label for="threshold" style="font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Ajustement du contraste</label>
+        <div class="panel">
+            <label for="threshold" style="font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Réglage de la clarté (Suppression des ombres)</label>
             <input type="range" id="threshold" min="50" max="220" value="130" style="width:100%; margin-bottom: 8px;" oninput="applyBinarization()">
             
             <div class="qc-bar">
@@ -304,23 +358,23 @@
                 <span id="qc-ratio" style="color: var(--text-muted);">Encre : --%</span>
             </div>
 
-            <!-- Toolbar Zoom -->
+            <!-- Zoom toolbar -->
             <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:6px;">
-                <button type="button" class="secondary icon-btn-compact" style="min-width:32px; height:32px;" onclick="adjustZoom(-20)">-</button>
+                <button type="button" class="secondary icon-btn-tool" style="min-width:32px; height:32px;" onclick="adjustZoom(-20)">-</button>
                 <span id="zoom-value" style="font-size:0.8rem; font-weight:bold;">100%</span>
-                <button type="button" class="secondary icon-btn-compact" style="min-width:32px; height:32px;" onclick="adjustZoom(20)">+</button>
+                <button type="button" class="secondary icon-btn-tool" style="min-width:32px; height:32px;" onclick="adjustZoom(20)">+</button>
             </div>
 
             <div class="preview-wrapper">
                 <canvas id="result-canvas"></canvas>
             </div>
 
-            <!-- Queue Multi-Pages -->
+            <!-- Option Multi-Pages (Ajouter une page supplémentaire) -->
             <div class="page-queue-container">
                 <div class="queue-header">
-                    <span>Fusion PDF : <strong id="page-count-badge">0 page</strong></span>
-                    <button type="button" class="secondary" style="padding: 4px 8px; font-size: 0.75rem; min-height: auto; flex: none;" onclick="addCurrentPageAndReset()">
-                        + Ajouter cette page
+                    <span>Document(s) prêt(s) pour fusion : <strong id="page-count-badge">0 page</strong></span>
+                    <button type="button" class="secondary" style="padding: 4px 8px; font-size: 0.75rem; min-height: auto; flex: none; background:#0056b3; color:white; border:none;" onclick="addCurrentPageAndContinue()">
+                        ➕ Ajouter une autre page
                     </button>
                 </div>
                 <div class="queue-thumbnails" id="queue-thumbnails">
@@ -332,28 +386,28 @@
             <div class="meta-group">
                 <div class="input-field">
                     <label for="doc-type">Type de document</label>
-                    <input type="text" id="doc-type" placeholder="Nature du document...">
+                    <input type="text" id="doc-type" placeholder="ex: Arrêt de travail, Certificat...">
                 </div>
                 <div class="input-field">
-                    <label for="agent-name">Nom Prénom Agent</label>
-                    <input type="text" id="agent-name" placeholder="Nom et prénom...">
+                    <label for="agent-name">Nom et Prénom de l'agent</label>
+                    <input type="text" id="agent-name" placeholder="ex: DUPONT Jean">
                 </div>
             </div>
 
-            <!-- Boutons Télécharger & Email avec Flaticons -->
+            <!-- Actions Télécharger / Email avec Flaticons HD -->
             <div class="action-grid">
                 <div class="btn-action-color" onclick="exportPDF('download')">
                     <img src="https://cdn-icons-png.flaticon.com/512/337/337946.png" alt="Télécharger PDF">
-                    <span>Télécharger</span>
+                    <span>Télécharger le PDF</span>
                 </div>
                 <div class="btn-action-color" onclick="exportPDF('email')">
                     <img src="https://cdn-icons-png.flaticon.com/512/542/542689.png" alt="Envoyer par Mail">
-                    <span>Envoyer mail</span>
+                    <span>Envoyer par e-mail</span>
                 </div>
             </div>
             
-            <button type="button" class="outline" style="margin-top:10px; width:100%;" onclick="switchView('view-crop')">
-                ← Retour au recadrage
+            <button type="button" class="secondary" style="margin-top:10px; width:100%;" onclick="switchView('view-crop')">
+                ← Modifier le recadrage
             </button>
         </div>
     </div>
@@ -385,18 +439,17 @@
         const sqcBadge = document.getElementById('sqc-badge');
         const sourceAlertBanner = document.getElementById('source-alert-banner');
 
-        // --- GESTIONNAIRE DE VUES (PAGES) ---
+        // Navigation entre les vues
         function switchView(viewId) {
             document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
             
             if (viewId === 'view-crop' && rawImage.src) {
-                // Forcer le redessin au changement de vue
                 setTimeout(() => { setupSourceCanvas(); }, 50);
             }
         }
 
-        // --- INPUT HANDLERS ---
+        // Importation photo
         function triggerInput(type) {
             if (type === 'camera') { inputCamera.value = ''; inputCamera.click(); }
             else { inputGallery.value = ''; inputGallery.click(); }
@@ -420,7 +473,7 @@
             reader.readAsDataURL(file);
         }
 
-        // --- CONTROLE QUALITÉ SOURCE ---
+        // Diagnostic Qualité
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
             const maxDim = 500;
@@ -488,7 +541,7 @@
             }
         }
 
-        // --- MANIPULATION DU RECADRAGE ---
+        // Recadrage & Canvas
         function setupSourceCanvas() {
             sourceCanvas.width = rawImage.width;
             sourceCanvas.height = rawImage.height;
@@ -633,11 +686,11 @@
             tCtx.drawImage(rawImage, -rawImage.width / 2, -rawImage.height / 2);
 
             rawImage = new Image();
-            rawImage.onload = () => { setupSourceCanvas(); analyzeSourceImage(); };
+            rawImage.onload = () => { setupSourceCanvas(); analyzeSourceImage(); resetPoints(); };
             rawImage.src = tempCanvas.toDataURL();
         }
 
-        // --- APERÇU & BINARISATION ---
+        // Aperçu & Binarisation
         function triggerManualWarp() {
             if (!rawImage.src || sourceCanvas.width === 0) return;
 
@@ -667,7 +720,7 @@
                 for (let x = 0; x < targetW; x++) {
                     const u = x / targetW;
                     const srcX = (1 - u) * (1 - v) * corners[0].x + u * (1 - v) * corners[1].x + u * v * corners[2].x + (1 - u) * v * corners[3].x;
-                    const srcY = (1 - u) * (1 - v) * corners[0].y + u * (1 - v) * corners[1].y + u * v * corners[2].y + (1 - u) * v * corners[3].y;
+                    const srcY = (1 - u) * (1 - v) * corners[0].y + u * (1 - v) * corners[0].y + u * v * corners[2].y + (1 - u) * v * corners[3].y;
                     const ix = Math.floor(srcX); const iy = Math.floor(srcY);
 
                     if (ix >= 0 && ix < cleanCanvas.width && iy >= 0 && iy < cleanCanvas.height) {
@@ -718,8 +771,8 @@
             document.getElementById('zoom-value').textContent = currentZoom + '%';
         }
 
-        // --- MULTI-PAGES & EXPORT ---
-        function addCurrentPageAndReset() {
+        // Multi-pages & Export
+        function addCurrentPageAndContinue() {
             if (!resultCanvas.width) return;
             pdfPageQueue.push({
                 dataUrl: resultCanvas.toDataURL('image/jpeg', 0.92),
@@ -728,7 +781,7 @@
             });
             renderQueueThumbnails();
             clearCurrentWorkspace();
-            switchView('view-import');
+            switchView('view-import'); // Retour accueil pour scanner la page suivante
         }
 
         function clearCurrentWorkspace() {
@@ -775,7 +828,7 @@
                     dataUrl: resultCanvas.toDataURL('image/jpeg', 0.95),
                     width: resultCanvas.width, height: resultCanvas.height
                 });
-            } else { alert("Veuillez d'abord prendre un document et générer son aperçu."); return; }
+            } else { alert("Veuillez d'abord prendre un document."); return; }
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -809,7 +862,7 @@
                     try {
                         await navigator.share({
                             title: `${docTypeVal} - ${agentNameVal}`,
-                            text: `Bonjour,\n\nJe vous transmets ${docTypeVal}.\n\nCordialement,`,
+                            text: `Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`,
                             files: [file]
                         });
                         resetApp();
