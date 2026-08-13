@@ -4,13 +4,13 @@
   "description": "Application PWA locale de traitement et numérisation de documents.",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2809/2809808.png",
+      "src": "./icone.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2809/2809808.png",
+      "src": "./icone.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
