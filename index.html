@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Optimisation des justificatifs</title>
@@ -12,11 +11,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0056b3">
 
-    <!-- Favicon & Touch Icon SVG -->
+    <!-- Favicon & Manifest -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230056b3'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/><circle cx='17' cy='17' r='4' fill='%2328a745'/><path d='M15.8 17l-1.2-1.2-.8.8 2 2 3.2-3.2-.8-.8z' fill='white'/></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230056b3'><rect width='24' height='24' rx='5' fill='%230056b3'/><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z' fill='white'/></svg>">
+    <link rel="manifest" href="manifest.json">
 
-    <!-- jsPDF pour l'export A4 -->
+    <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
@@ -44,7 +43,6 @@
             min-height: 100vh;
         }
 
-        /* Header Mobile Compact */
         .header { text-align: center; margin: 5px 0 12px 0; width: 100%; }
         .header h2 { margin: 0 0 4px 0; font-size: 1.25rem; color: #1a252f; }
         .badge-secu { 
@@ -60,7 +58,6 @@
             border: 1px solid #c8e6c9;
         }
 
-        /* Layout Vertical Mobile Monocolonne */
         .mobile-layout {
             display: flex;
             flex-direction: column;
@@ -102,27 +99,39 @@
         }
         .step-title { font-size: 0.95rem; font-weight: 700; color: #2c3e50; margin: 0; }
 
-        /* Bouton Prendre Photo / Drop Mobile */
-        #drop-zone {
-            border: 2px dashed var(--primary);
-            border-radius: 10px;
-            padding: 20px 10px;
+        /* Boutons d'importation Dual (Camera / Galerie) */
+        .import-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .btn-import-option {
+            background: #f8f9fa;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 15px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 8px;
             cursor: pointer;
-            background-color: #f8f9fa;
-            text-align: center;
+            transition: all 0.2s;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #2c3e50;
         }
+        .btn-import-option:active { transform: scale(0.97); background: #eef4fc; border-color: var(--primary); }
+        .btn-import-option img { width: 42px; height: 42px; }
 
         #workspace { display: none; flex-direction: column; width: 100%; }
 
         .crop-wrapper {
             position: relative;
             width: 100%;
-            height: 60vh;
-            max-height: 420px;
+            height: 55vh;
+            max-height: 400px;
             background-color: #111;
             margin-bottom: 10px;
             overflow: hidden;
@@ -134,18 +143,12 @@
 
         #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
 
-        /* Étape 2 : Bouton Action Transfert Large Mobile */
-        .btn-transfer-wrapper {
-            display: flex;
-            justify-content: center;
-            margin: 4px 0;
-        }
         .btn-transfer-mobile {
             background: linear-gradient(135deg, var(--primary), #003d82);
             color: white;
             border: none;
             border-radius: 30px;
-            padding: 12px 24px;
+            padding: 12px;
             font-size: 0.9rem;
             font-weight: 700;
             display: flex;
@@ -154,22 +157,41 @@
             width: 100%;
             justify-content: center;
             box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+            margin: 4px 0;
+            cursor: pointer;
         }
-        .btn-transfer-mobile svg { width: 20px; height: 20px; fill: white; }
 
-        /* Aperçu Mobile */
+        /* Conteneur d'Aperçu avec support Zoom & Aspect Ratio */
         .preview-wrapper {
             width: 100%; 
-            height: 45vh;
-            max-height: 320px;
+            height: 50vh;
+            max-height: 360px;
             background: #e9ecef;
             overflow: auto;
             border-radius: 8px; 
             border: 1px solid var(--border);
             position: relative;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #result-canvas { display: block; margin: 0 auto; width: 100%; background: white; }
+        #result-canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            background: white;
+            transition: width 0.15s ease;
+        }
+
+        .toolbar-zoom {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
 
         /* Queue Multi-Pages Mobile */
         .page-queue-container {
@@ -209,7 +231,6 @@
         }
         #source-alert-banner.alert-danger { background-color: #f8d7da; color: #842029; }
         #source-alert-banner.alert-warning { background-color: #fff3cd; color: #664d03; }
-        #source-alert-banner.alert-success { background-color: #d1e7dd; color: #0f5132; }
 
         .meta-group {
             display: flex; flex-direction: column; gap: 8px;
@@ -220,19 +241,34 @@
         .input-field label { font-size: 0.75rem; font-weight: 700; }
         .input-field input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
 
-        .controls-row { display: flex; gap: 6px; }
-        .action-buttons-group { display: flex; flex-direction: column; gap: 8px; }
+        .controls-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .btn-action-color {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .btn-action-color img { width: 32px; height: 32px; }
 
         button {
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            background-color: var(--primary); color: white; border: none; padding: 12px 10px;
-            border-radius: 8px; font-weight: 600; font-size: 0.85rem; min-height: 44px; flex: 1;
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+            background-color: var(--primary); color: white; border: none; padding: 10px;
+            border-radius: 8px; font-weight: 600; font-size: 0.8rem; min-height: 40px; flex: 1;
         }
         button.secondary { background-color: #6c757d; }
-        button.success { background-color: var(--success); font-size: 0.9rem; }
-        button.email-btn { background-color: #17a2b8; font-size: 0.9rem; } /* Bouton Mail Bleu Cyan */
-        button.outline { background-color: transparent; border: 1.5px solid #6c757d; color: #6c757d; }
-        button.icon-btn-compact { flex: 0; min-width: 44px; padding: 0; }
+        button.icon-btn-compact { flex: 0; min-width: 40px; padding: 0; }
         button svg { width: 18px; height: 18px; fill: currentColor; }
 
         .footer { margin-top: 1rem; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-align: center; }
@@ -242,31 +278,33 @@
 
     <div class="header">
         <h2>Optimisation des justificatifs</h2>
-        <span class="badge-secu">
-            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor;">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-            </svg>
-            Traitement 100% Local (Mobile)
-        </span>
+        <span class="badge-secu">Traitement 100% Local (Mobile)</span>
     </div>
 
     <div class="mobile-layout">
         
-        <!-- ÉTAPE 1 : IMPORT / CAMERA ET RECADRAGE -->
+        <!-- ÉTAPE 1 : IMPORTATION DUAL & RECADRAGE -->
         <div class="panel">
             <div class="step-header">
                 <div class="step-number">1</div>
                 <h3 class="step-title">Capture & Redressement</h3>
             </div>
 
-            <!-- Déclencheur Caméra Smartphone -->
-            <div id="drop-zone">
-                <svg viewBox="0 0 24 24" style="width: 40px; height: 44px; fill: var(--primary); margin-bottom: 6px;">
-                    <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-                </svg>
-                <p style="margin:0; font-weight: 700; font-size: 0.9rem;">Prendre une photo / Parcourir</p>
-                <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
+            <!-- Grille Dual Import -->
+            <div class="import-grid" id="drop-zone">
+                <div class="btn-import-option" onclick="triggerInput('camera')">
+                    <img src="https://img.icons8.com/color/96/camera--v1.png" alt="Appareil photo">
+                    <span>Appareil photo</span>
+                </div>
+                <div class="btn-import-option" onclick="triggerInput('gallery')">
+                    <img src="https://img.icons8.com/color/96/photo-gallery.png" alt="Galerie">
+                    <span>Galerie</span>
+                </div>
             </div>
+
+            <!-- Inputs cachés séparés -->
+            <input type="file" id="input-camera" accept="image/*" capture="environment" style="display: none;">
+            <input type="file" id="input-gallery" accept="image/*" style="display: none;">
 
             <div id="workspace">
                 <div id="source-alert-banner"></div>
@@ -289,13 +327,19 @@
                         <svg viewBox="0 0 24 24"><path d="M15.55 5.55L14.14 7c.52.75.9 1.6 1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.92zM12 4c4.42 0 8 3.58 8 8 0 1.57-.46 3.03-1.24 4.26l-1.46-1.46c.45-.83.7-1.79.7-2.8 0-3.31-2.69-6-6-6v3L8 5l4-4v3zm5.19 11.47c-.5.75-.88 1.6-1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.89l-1.37 1.42zM12 20c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 9.74C4.46 10.97 4 12.43 4 14c0 4.42 3.58 8 8 8v-3l4 4-4 4v-3z"/></svg>
                     </button>
                     <button type="button" class="secondary" onclick="resetPoints()">Reset coins</button>
-                    <button type="button" class="outline" onclick="changeSourceImage()">Reprendre</button>
+                    <!-- Boutons de remplacement direct -->
+                    <button type="button" class="secondary icon-btn-compact" onclick="triggerInput('camera')" title="Reprendre photo">
+                        <img src="https://img.icons8.com/color/48/camera--v1.png" style="width:20px;">
+                    </button>
+                    <button type="button" class="secondary icon-btn-compact" onclick="triggerInput('gallery')" title="Ouvrir galerie">
+                        <img src="https://img.icons8.com/color/48/photo-gallery.png" style="width:20px;">
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- ÉTAPE 2 : BOUTON VALIDER APERÇU MOBILE -->
-        <div class="btn-transfer-wrapper">
+        <!-- ÉTAPE 2 : TRANSFERT APERÇU -->
+        <div>
             <button type="button" class="btn-transfer-mobile" onclick="triggerManualWarp()">
                 <span>Étape 2 : Envoyer vers l'aperçu</span>
                 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
@@ -318,15 +362,22 @@
                 <span id="qc-ratio" style="color: var(--text-muted);">Encre : --%</span>
             </div>
 
+            <!-- Zoom toolbar -->
+            <div class="toolbar-zoom">
+                <button type="button" class="secondary icon-btn-compact" onclick="adjustZoom(-20)">-</button>
+                <span id="zoom-value" style="font-size: 0.8rem; font-weight: bold; width: 40px; text-align: center;">100%</span>
+                <button type="button" class="secondary icon-btn-compact" onclick="adjustZoom(20)">+</button>
+            </div>
+
             <div class="preview-wrapper">
                 <canvas id="result-canvas"></canvas>
             </div>
 
-            <!-- Queue Multi-Pages (Vignettes) -->
+            <!-- Queue Multi-Pages -->
             <div class="page-queue-container">
                 <div class="queue-header">
                     <span>Fusion PDF : <strong id="page-count-badge">0 page</strong></span>
-                    <button type="button" class="success" style="padding: 4px 8px; font-size: 0.75rem; min-height: auto; flex: none;" onclick="addCurrentPageAndReset()">
+                    <button type="button" class="secondary" style="padding: 4px 8px; font-size: 0.75rem; min-height: auto; flex: none;" onclick="addCurrentPageAndReset()">
                         + Valider page
                     </button>
                 </div>
@@ -335,7 +386,7 @@
                 </div>
             </div>
 
-            <!-- ÉTAPE 4 : MÉTADONNÉES MOBILE ET EXPORT -->
+            <!-- ÉTAPE 4 : MÉTADONNÉES & BOUTONS D'ACTION FLATICON -->
             <div class="meta-group">
                 <div class="input-field">
                     <label for="doc-type">Type de document</label>
@@ -346,17 +397,16 @@
                     <input type="text" id="agent-name" placeholder="Nom et prénom...">
                 </div>
             </div>
-            
-            <div class="action-buttons-group">
-                <button type="button" class="success" onclick="exportPDF('download')">
-                    <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    4. Télécharger le PDF A4
-                </button>
-                
-                <button type="button" class="email-btn" onclick="exportPDF('email')">
-                    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                    4. Envoyer directement par e-mail
-                </button>
+
+            <div class="action-grid">
+                <div class="btn-action-color" onclick="exportPDF('download')">
+                    <img src="https://img.icons8.com/color/96/pdf-2.png" alt="Télécharger PDF">
+                    <span>Télécharger PDF</span>
+                </div>
+                <div class="btn-action-color" onclick="exportPDF('email')">
+                    <img src="https://img.icons8.com/color/96/gmail-new.png" alt="Envoyer par Mail">
+                    <span>Envoyer par mail</span>
+                </div>
             </div>
         </div>
 
@@ -373,12 +423,13 @@
         let activeEdge = -1;
         let dragStartPos = null;
         let dragStartCorners = null;
+        let currentZoom = 100;
 
         let unbinarizedCanvas = document.createElement('canvas');
         let pdfPageQueue = [];
 
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
+        const inputCamera = document.getElementById('input-camera');
+        const inputGallery = document.getElementById('input-gallery');
         const workspace = document.getElementById('workspace');
         const sourceCanvas = document.getElementById('source-canvas');
         const sCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
@@ -393,22 +444,25 @@
         const sqcBadge = document.getElementById('sqc-badge');
         const sourceAlertBanner = document.getElementById('source-alert-banner');
 
-        // Initialisation métadonnées
         document.getElementById('doc-type').value = "";
         document.getElementById('agent-name').value = "";
 
-        // --- 1. CAPTURE / DRAG & DROP ---
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) loadFile(e.target.files[0]);
-        });
+        // --- 1. DUAL INPUT HANDLER ---
+        function triggerInput(type) {
+            if (type === 'camera') { inputCamera.value = ''; inputCamera.click(); }
+            else { inputGallery.value = ''; inputGallery.click(); }
+        }
+
+        inputCamera.addEventListener('change', (e) => { if (e.target.files.length > 0) loadFile(e.target.files[0]); });
+        inputGallery.addEventListener('change', (e) => { if (e.target.files.length > 0) loadFile(e.target.files[0]); });
 
         function loadFile(file) {
             if (!file.type.startsWith('image/')) return;
             const reader = new FileReader();
             reader.onload = (e) => {
+                rawImage = new Image();
                 rawImage.onload = () => {
-                    dropZone.style.display = 'none';
+                    document.getElementById('drop-zone').style.display = 'none';
                     workspace.style.display = 'flex';
                     setupSourceCanvas();
                     analyzeSourceImage();
@@ -417,11 +471,6 @@
                 rawImage.src = e.target.result;
             };
             reader.readAsDataURL(file);
-        }
-
-        function changeSourceImage() {
-            fileInput.value = '';
-            fileInput.click();
         }
 
         // --- CONTROLE QUALITÉ SOURCE ---
@@ -479,8 +528,6 @@
             const isVeryDark = brightness < 45;
 
             sqcBadge.className = 'qc-status';
-            sourceAlertBanner.className = '';
-
             if (isTooBlurry || isVeryDark) {
                 sqcBadge.textContent = 'Inexploitable';
                 sqcBadge.classList.add('qc-danger');
@@ -494,14 +541,14 @@
             }
         }
 
-        // --- 2. MANIPULATION DES POINTS DE PERSPECTIVE ---
+        // --- 2. MANIPULATION DU RECADRAGE ---
         function setupSourceCanvas() {
             sourceCanvas.width = rawImage.width;
             sourceCanvas.height = rawImage.height;
             drawSource();
         }
 
-        function resetPoints(autoWarp = false) {
+        function resetPoints() {
             const w = sourceCanvas.width;
             const h = sourceCanvas.height;
             const padX = w * 0.05;
@@ -514,7 +561,6 @@
                 { x: padX, y: h - padY }
             ];
             drawSource();
-            if (autoWarp) triggerManualWarp();
         }
 
         function drawSource() {
@@ -638,11 +684,11 @@
             tCtx.drawImage(rawImage, -rawImage.width / 2, -rawImage.height / 2);
 
             rawImage = new Image();
-            rawImage.onload = () => { setupSourceCanvas(); analyzeSourceImage(); resetPoints(false); };
+            rawImage.onload = () => { setupSourceCanvas(); analyzeSourceImage(); resetPoints(); };
             rawImage.src = tempCanvas.toDataURL();
         }
 
-        // --- 3. APERÇU ET BINARISATION ---
+        // --- 3. APERÇU ET ZOOM ---
         function triggerManualWarp() {
             if (!rawImage.src || sourceCanvas.width === 0) {
                 alert("Veuillez d'abord prendre ou charger une photo.");
@@ -687,7 +733,6 @@
             }
             uCtx.putImageData(outImgData, 0, 0);
             applyBinarization();
-
             resultCanvas.scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -721,6 +766,12 @@
             else { qcBadge.textContent = 'Ombres'; qcBadge.classList.add('qc-warning'); }
         }
 
+        function adjustZoom(delta) {
+            currentZoom = Math.max(20, Math.min(300, currentZoom + delta));
+            resultCanvas.style.width = currentZoom + '%';
+            document.getElementById('zoom-value').textContent = currentZoom + '%';
+        }
+
         // --- 4. MULTI-PAGES & EXPORT ---
         function addCurrentPageAndReset() {
             if (!resultCanvas.width) { alert("Veuillez d'abord générer l'aperçu."); return; }
@@ -735,8 +786,9 @@
         }
 
         function clearCurrentWorkspace() {
-            workspace.style.display = 'none'; dropZone.style.display = 'flex';
-            fileInput.value = ''; rawImage = new Image();
+            workspace.style.display = 'none'; 
+            document.getElementById('drop-zone').style.display = 'grid';
+            rawImage = new Image();
             sCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
             rCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
             unbinarizedCanvas = document.createElement('canvas');
@@ -771,18 +823,7 @@
             });
         }
 
-        function formatFilename() {
-            let docType = document.getElementById('doc-type').value.trim();
-            let agentName = document.getElementById('agent-name').value.trim();
-            docType = docType ? docType.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Document';
-            agentName = agentName ? agentName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Anonyme';
-            
-            const now = new Date();
-            const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-            return `${docType}_${agentName}_${dateStr}.pdf`;
-        }
-
-        // --- EXPORT PDF AVEC OPTION 'DOWNLOAD' OU 'EMAIL' ---
+        // --- 5. FORMATAGE DU MAIL & EXPORT PDF ---
         async function exportPDF(mode = 'download') {
             let pagesToExport = [];
             if (pdfPageQueue.length > 0) { pagesToExport = pdfPageQueue; } 
@@ -810,38 +851,42 @@
                 pdf.addImage(page.dataUrl, 'JPEG', (pdfWidth - finalWidth) / 2, (pdfHeight - finalHeight) / 2, finalWidth, finalHeight);
             });
 
-            const fileName = formatFilename();
+            let docTypeVal = document.getElementById('doc-type').value.trim() || 'Document';
+            let agentNameVal = document.getElementById('agent-name').value.trim() || 'Anonyme';
+            
+            const now = new Date();
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+            const fileName = `${docTypeVal.replace(/[^a-zA-Z0-9_-]/g, '_')}_${agentNameVal.replace(/[^a-zA-Z0-9_-]/g, '_')}_${dateStr}.pdf`;
 
             if (mode === 'email') {
                 const pdfBlob = pdf.output('blob');
                 const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-                // Tentative 1 : Partage natif mobile avec fichier (Web Share API)
+                // Tentative Share API
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
                         await navigator.share({
-                            title: 'Justificatif optimisé',
-                            text: `Veuillez trouver ci-joint le document : ${fileName}`,
+                            title: `${docTypeVal} - ${agentNameVal}`,
+                            text: `Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`,
                             files: [file]
                         });
                         resetApp();
                         return;
                     } catch (err) {
-                        console.log("Partage annulé ou échoué, passage au mode fallback.");
+                        console.log("Partage non supporté ou annulé.");
                     }
                 }
 
-                // Fallback : Téléchargement + Ouverture Mailto
+                // Fallback Mailto structuré + téléchargement
                 pdf.save(fileName);
-                const subject = encodeURIComponent(`Justificatif - ${fileName.replace('.pdf', '')}`);
-                const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint le document justificatif optimisé (${fileName}).\n\nCordialement,`);
+                const subject = encodeURIComponent(`${docTypeVal} ${agentNameVal}`);
+                const body = encodeURIComponent(`Bonjour,\n\nJe vous transmets ${docTypeVal}.\n\nCordialement,`);
                 
                 setTimeout(() => {
                     window.location.href = `mailto:?subject=${subject}&body=${body}`;
                 }, 500);
 
             } else {
-                // Mode Téléchargement classique
                 pdf.save(fileName);
             }
 
@@ -854,7 +899,17 @@
             renderQueueThumbnails();
             document.getElementById('doc-type').value = "";
             document.getElementById('agent-name').value = "";
+            currentZoom = 100;
+            resultCanvas.style.width = '100%';
+            document.getElementById('zoom-value').textContent = '100%';
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Service Worker Registration pour PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
         }
     </script>
 </body>
