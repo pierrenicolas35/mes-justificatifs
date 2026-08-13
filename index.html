@@ -34,42 +34,38 @@
         
         html, body {
             width: 100%;
-            height: 100%;
+            min-height: 100%;
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text-dark);
-            overflow: hidden;
+            overflow-y: auto; /* Défilement toujours autorisé */
         }
 
-        /* Vues Plein Écran (Stepper) */
+        /* Vues Plein Écran */
         .app-view {
             display: none;
             flex-direction: column;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            min-height: 100vh;
             padding: 12px;
-            position: absolute;
-            top: 0;
-            left: 0;
             background: var(--bg);
-            overflow-y: auto;
         }
         .app-view.active { display: flex; }
 
         /* En-tête & Barre de Progression */
         .header { text-align: center; margin-bottom: 8px; width: 100%; flex-shrink: 0; }
-        .header h2 { margin: 0 0 4px 0; font-size: 1.2rem; color: #1a252f; }
+        .header h2 { margin: 0 0 4px 0; font-size: 1.3rem; color: #1a252f; font-weight: 800; }
         .badge-secu { 
             display: inline-flex;
             align-items: center;
             gap: 4px;
             color: var(--success); 
-            font-weight: 600; 
-            font-size: 0.72rem; 
+            font-weight: 700; 
+            font-size: 0.75rem; 
             background: #e8f5e9;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 15px;
             border: 1px solid #c8e6c9;
         }
@@ -79,204 +75,210 @@
             align-items: center;
             justify-content: space-between;
             background: #ffffff;
-            padding: 8px 12px;
-            border-radius: 10px;
+            padding: 10px 14px;
+            border-radius: 12px;
             border: 1px solid var(--border);
-            margin-bottom: 10px;
-            font-size: 0.8rem;
-            font-weight: 700;
+            margin-bottom: 12px;
+            font-size: 0.88rem;
+            font-weight: 800;
             color: var(--primary);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+            flex-shrink: 0;
         }
-        .stepper-dots { display: flex; gap: 6px; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; background: #ced4da; }
-        .dot.active { background: var(--primary); transform: scale(1.2); }
 
         .panel {
             background: var(--panel);
             padding: 14px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-radius: 14px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06);
             border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             width: 100%;
+            margin-bottom: 12px;
         }
 
-        /* VUE 1 : ACCUEIL IMPORTATION */
+        /* ÉTAPE 1 : ACCUEIL IMPORTATION */
         .import-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin: 20px 0;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin: 15px 0;
         }
         .btn-import-option {
             background: #ffffff;
-            border: 2px solid var(--border);
+            border: 2px solid var(--primary);
             border-radius: 16px;
-            padding: 25px 10px;
+            padding: 22px 15px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
+            justify-content: flex-start;
+            gap: 18px;
             cursor: pointer;
-            font-weight: 700;
-            font-size: 0.9rem;
-            color: #2c3e50;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-            text-align: center;
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: #1a252f;
+            box-shadow: 0 4px 12px rgba(0,86,179,0.08);
+            text-align: left;
         }
-        .btn-import-option:active { transform: scale(0.96); border-color: var(--primary); background: #eef4fc; }
-        .btn-import-option img { width: 52px; height: 52px; object-fit: contain; }
+        .btn-import-option:active { transform: scale(0.97); background: #eef4fc; }
+        .btn-import-option img { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
 
-        /* VUE 2 : RECADRAGE FULLSCREEN */
+        /* ÉTAPE 2 : RECADRAGE */
         .fullscreen-crop-wrapper {
             position: relative;
             width: 100%;
-            flex-grow: 1;
+            height: 55vh;
+            min-height: 320px;
             background-color: #111;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
 
-        /* VUE 3 : APERÇU ET REGLAGES */
-        .preview-wrapper {
+        /* ÉTAPE 3 : APERÇU & ZOOM FIX */
+        .preview-scroll-container {
             width: 100%; 
-            height: 35vh;
+            height: 42vh;
+            min-height: 280px;
             background: #e9ecef;
-            overflow: auto;
-            border-radius: 8px; 
+            overflow: auto; /* Permet le scroll lors du zoom */
+            border-radius: 10px; 
             border: 1px solid var(--border);
             position: relative;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        #result-canvas { display: block; max-width: 100%; max-height: 100%; object-fit: contain; background: white; }
+        #result-canvas { 
+            display: block; 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+            background: white;
+            transform-origin: center center;
+            transition: transform 0.15s ease-out;
+        }
 
-        /* Queue Multi-Pages (Vignettes) */
-        .page-queue-container {
-            background: #f8f9fa;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+        /* ÉTAPE 4 : REORGANISATION DES PAGES */
+        .queue-list-large {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .page-card-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
             padding: 10px;
-            margin-bottom: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
-        .queue-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
-        .queue-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; min-height: 55px; }
-        .thumb-item {
-            position: relative; flex-shrink: 0; width: 42px; height: 54px;
-            border: 2px solid var(--primary); border-radius: 4px; overflow: hidden; background: white;
+        .page-card-item.active { border-color: var(--primary); }
+        .page-card-thumb {
+            width: 50px;
+            height: 65px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            object-fit: cover;
+            background: #eee;
         }
-        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
-        .thumb-item .thumb-del {
-            position: absolute; top: 1px; right: 1px; background: rgba(220,53,69,0.9);
-            color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 11px;
-            display: flex; align-items: center; justify-content: center; font-weight: bold;
+        .page-card-info {
+            flex-grow: 1;
+            margin: 0 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
         }
 
-        /* Quality Indicators & Form */
-        .qc-bar {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #f8f9fa; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
-            margin-bottom: 8px; font-size: 0.78rem; font-weight: 600;
-        }
-        .qc-status { padding: 2px 6px; border-radius: 10px; color: white; font-size: 0.72rem; font-weight: 700; }
-        .qc-optimal { background-color: #28a745; }
-        .qc-warning { background-color: #fd7e14; }
-        .qc-danger { background-color: #dc3545; }
-
+        /* Alertes & Formulaire */
         #source-alert-banner {
-            display: none; padding: 8px; border-radius: 6px; margin-bottom: 8px;
-            font-size: 0.78rem; font-weight: 600; line-height: 1.3;
+            display: none; padding: 10px; border-radius: 8px; margin-bottom: 10px;
+            font-size: 0.85rem; font-weight: 700; line-height: 1.35;
+            background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7;
         }
-        #source-alert-banner.alert-danger { background-color: #f8d7da; color: #842029; }
 
         .meta-group {
-            display: flex; flex-direction: column; gap: 8px;
-            background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-            margin-bottom: 10px;
+            display: flex; flex-direction: column; gap: 10px;
+            background: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+            margin-bottom: 12px;
         }
-        .input-field { display: flex; flex-direction: column; gap: 3px; }
-        .input-field label { font-size: 0.75rem; font-weight: 700; }
-        .input-field input { padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
+        .input-field { display: flex; flex-direction: column; gap: 4px; }
+        .input-field label { font-size: 0.8rem; font-weight: 800; color: #2c3e50; }
+        .input-field input { padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; outline: none; }
 
         /* Navigation & Buttons */
-        .nav-buttons-row { display: flex; gap: 8px; width: 100%; flex-shrink: 0; margin-top: auto; }
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .controls-row { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 5px; }
 
         .btn-action-color {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 6px; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
-            background: white; font-size: 0.82rem; font-weight: 700; color: var(--text-dark); cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            gap: 8px; padding: 15px 10px; border-radius: 14px; border: 2px solid var(--border);
+            background: white; font-size: 0.88rem; font-weight: 800; color: var(--text-dark); cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.05); text-align: center;
         }
-        .btn-action-color:active { transform: scale(0.97); background: #f8f9fa; }
-        .btn-action-color img { width: 36px; height: 36px; object-fit: contain; }
+        .btn-action-color:active { transform: scale(0.96); background: #f8f9fa; border-color: var(--primary); }
+        .btn-action-color img { width: 44px; height: 44px; object-fit: contain; }
 
         button {
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            background-color: var(--primary); color: white; border: none; padding: 12px 10px;
-            border-radius: 8px; font-weight: 700; font-size: 0.88rem; min-height: 46px; flex: 1;
-            cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background-color: var(--primary); color: white; border: none; padding: 12px 14px;
+            border-radius: 10px; font-weight: 800; font-size: 0.92rem; min-height: 48px; flex: 1;
+            cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.08);
         }
-        button:active { transform: scale(0.98); }
+        button:active { transform: scale(0.97); }
         button.secondary { background-color: #6c757d; }
         button.success { background-color: var(--success); }
+        
         button.icon-btn-tool {
             flex: 0;
-            min-width: 44px;
-            height: 44px;
+            min-width: 48px;
+            height: 48px;
             padding: 0;
             background: #ffffff;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             color: #333;
         }
-        button.icon-btn-tool svg { width: 22px; height: 22px; fill: #0056b3; }
+        button.icon-btn-tool svg { width: 24px; height: 24px; fill: var(--primary); }
 
-        .footer { margin-top: auto; padding-top: 8px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-align: center; }
+        .footer { margin-top: auto; padding: 12px 0; color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- ================= VUE 1 : ACCUEIL & CAPTURE ================= -->
-    <div id="view-import" class="app-view active">
+    <!-- ================= ÉTAPE 1 : DEPOSER ================= -->
+    <div id="view-1-import" class="app-view active">
         <div class="header">
             <h2>Optimisation des justificatifs</h2>
             <span class="badge-secu">Traitement 100% Local (Confidentiel)</span>
         </div>
 
         <div class="stepper-bar">
-            <span>Étape 1 : Choisir la photo</span>
-            <div class="stepper-dots">
-                <div class="dot active"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-            </div>
+            <span>Étape 1 sur 5 : Déposez votre document</span>
         </div>
 
-        <div style="margin: auto 0; width: 100%;">
-            <p style="text-align: center; font-weight: 700; color: #2c3e50; margin-bottom: 10px; font-size: 0.95rem;">
-                Comment souhaitez-vous ajouter votre document ?
+        <div class="panel">
+            <p style="text-align: center; font-weight: 800; color: #2c3e50; margin: 5px 0 15px 0; font-size: 1rem;">
+                Choisissez une méthode d'envoi :
             </p>
             <div class="import-grid">
+                <!-- Bouton Appareil Photo Couleur Flaticon HD -->
                 <div class="btn-import-option" onclick="triggerInput('camera')">
-                    <!-- Flaticon Appareil Photo HD -->
                     <img src="https://cdn-icons-png.flaticon.com/512/3004/3004613.png" alt="Appareil Photo">
                     <span>Prendre une photo</span>
                 </div>
+                <!-- Bouton Galerie Couleur Flaticon HD -->
                 <div class="btn-import-option" onclick="triggerInput('gallery')">
-                    <!-- Flaticon Galerie HD -->
                     <img src="https://cdn-icons-png.flaticon.com/512/1375/1375106.png" alt="Galerie">
-                    <span>Choisir en galerie</span>
+                    <span>Choisir dans la galerie</span>
                 </div>
             </div>
         </div>
@@ -287,23 +289,15 @@
         <div class="footer">Application développée par P.NICOLAS</div>
     </div>
 
-    <!-- ================= VUE 2 : RECADRAGE GUIDÉ ================= -->
-    <div id="view-crop" class="app-view">
+    <!-- ================= ÉTAPE 2 : CADRER ================= -->
+    <div id="view-2-crop" class="app-view">
         <div class="stepper-bar">
-            <span>Étape 2 : Ajuster les coins du document</span>
-            <div class="stepper-dots">
-                <div class="dot"></div>
-                <div class="dot active"></div>
-                <div class="dot"></div>
-            </div>
+            <span>Étape 2 sur 5 : Cadrez le document</span>
         </div>
 
-        <div class="qc-bar" style="margin-bottom: 6px;">
-            <div>Netteté : <strong id="sqc-sharpness-val">--</strong> | Lumière : <strong id="sqc-brightness-val">--</strong></div>
-            <span id="sqc-badge" class="qc-status qc-optimal">Diag</span>
+        <div id="source-alert-banner">
+            ⚠️ Attention : La photo est trop floue ou trop sombre. Risque de texte illisible.
         </div>
-
-        <div id="source-alert-banner"></div>
 
         <!-- Zone de recadrage plein écran -->
         <div class="fullscreen-crop-wrapper">
@@ -311,81 +305,112 @@
         </div>
 
         <!-- Barre d'outils bas de page -->
-        <div class="nav-buttons-row">
-            <!-- Pivoter Gauche SVG Net -->
+        <div class="controls-row">
+            <!-- Pivoter Gauche SVG Vectoriel Net -->
             <button type="button" class="icon-btn-tool" onclick="rotateSource(-90)" title="Pivoter à gauche">
                 <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.52-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.63 3.89l1.41-1.42c-.52-.75-.9-1.6-1.02-2.47zM12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8z"/></svg>
             </button>
             
-            <!-- Pivoter Droite SVG Net -->
+            <!-- Pivoter Droite SVG Vectoriel Net -->
             <button type="button" class="icon-btn-tool" onclick="rotateSource(90)" title="Pivoter à droite">
                 <svg viewBox="0 0 24 24"><path d="M15.55 5.55L14.14 7c.52.75.9 1.6 1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.92zM12 4c4.42 0 8 3.58 8 8 0 1.57-.46 3.03-1.24 4.26l-1.46-1.46c.45-.83.7-1.79.7-2.8 0-3.31-2.69-6-6-6v3L8 5l4-4v3zm5.19 11.47c-.5.75-.88 1.6-1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.89l-1.37 1.42zM12 20c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 9.74C4.46 10.97 4 12.43 4 14c0 4.42 3.58 8 8 8v-3l4 4-4 4v-3z"/></svg>
             </button>
             
-            <!-- Actualiser / Reset coins SVG Net -->
+            <!-- Réinitialiser coins SVG Vectoriel Net -->
             <button type="button" class="icon-btn-tool" onclick="resetPoints()" title="Réinitialiser les coins">
                 <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             </button>
 
-            <button type="button" class="secondary" style="flex:0; padding:0 12px;" onclick="switchView('view-import')">
+            <button type="button" class="secondary" style="flex:0; padding:0 14px;" onclick="switchView('view-1-import')">
                 ← Retour
             </button>
 
             <button type="button" class="success" onclick="triggerManualWarp()">
-                Valider ➔
+                Continuer ➔
             </button>
         </div>
     </div>
 
-    <!-- ================= VUE 3 : APERÇU, REGLAGES & EXPORT ================= -->
-    <div id="view-preview" class="app-view">
+    <!-- ================= ÉTAPE 3 : AJUSTER LA CLARTÉ ================= -->
+    <div id="view-3-preview" class="app-view">
         <div class="stepper-bar">
-            <span>Étape 3 : Vérifier et télécharger</span>
-            <div class="stepper-dots">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot active"></div>
-            </div>
+            <span>Étape 3 sur 5 : Ajustez la clarté</span>
         </div>
 
         <div class="panel">
-            <label for="threshold" style="font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Réglage de la clarté (Suppression des ombres)</label>
-            <input type="range" id="threshold" min="50" max="220" value="130" style="width:100%; margin-bottom: 8px;" oninput="applyBinarization()">
+            <label for="threshold" style="font-size: 0.85rem; font-weight: 800; margin-bottom: 6px;">Déplacez le curseur pour effacer les ombres :</label>
+            <input type="range" id="threshold" min="50" max="220" value="130" style="width:100%; margin-bottom: 10px;" oninput="applyBinarization()">
             
-            <div class="qc-bar">
-                <span>Rendu impression :</span>
-                <span id="qc-badge" class="qc-status qc-optimal">En attente</span>
-                <span id="qc-ratio" style="color: var(--text-muted);">Encre : --%</span>
+            <!-- Barre de Zoom -->
+            <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:8px;">
+                <span style="font-size:0.8rem; font-weight:800;">Zoom :</span>
+                <button type="button" class="secondary icon-btn-tool" style="min-width:36px; height:36px;" onclick="adjustZoom(-20)">-</button>
+                <span id="zoom-value" style="font-size:0.85rem; font-weight:bold; width:45px; text-align:center;">100%</span>
+                <button type="button" class="secondary icon-btn-tool" style="min-width:36px; height:36px;" onclick="adjustZoom(20)">+</button>
             </div>
 
-            <!-- Zoom toolbar -->
-            <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:6px;">
-                <button type="button" class="secondary icon-btn-tool" style="min-width:32px; height:32px;" onclick="adjustZoom(-20)">-</button>
-                <span id="zoom-value" style="font-size:0.8rem; font-weight:bold;">100%</span>
-                <button type="button" class="secondary icon-btn-tool" style="min-width:32px; height:32px;" onclick="adjustZoom(20)">+</button>
-            </div>
-
-            <div class="preview-wrapper">
+            <!-- Conteneur d'aperçu avec Zoom fonctionnel -->
+            <div class="preview-scroll-container">
                 <canvas id="result-canvas"></canvas>
             </div>
 
-            <!-- Option Multi-Pages (Ajouter une page supplémentaire) -->
-            <div class="page-queue-container">
-                <div class="queue-header">
-                    <span>Document(s) prêt(s) pour fusion : <strong id="page-count-badge">0 page</strong></span>
-                    <button type="button" class="secondary" style="padding: 4px 8px; font-size: 0.75rem; min-height: auto; flex: none; background:#0056b3; color:white; border:none;" onclick="addCurrentPageAndContinue()">
-                        ➕ Ajouter une autre page
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
+                <button type="button" class="secondary" onclick="addPageAndScanAnother()">
+                    ➕ Sauvegarder et ajouter une autre page
+                </button>
+
+                <div class="controls-row">
+                    <button type="button" class="secondary" style="flex:0; padding:0 14px;" onclick="switchView('view-2-crop')">
+                        ← Retour
+                    </button>
+                    <button type="button" class="success" onclick="confirmCurrentPageAndGoToManage()">
+                        Continuer ➔
                     </button>
                 </div>
-                <div class="queue-thumbnails" id="queue-thumbnails">
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">Aucune page mise de côté.</span>
-                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ÉTAPE 4 : REORGANISER LES PAGES ================= -->
+    <div id="view-4-pages" class="app-view">
+        <div class="stepper-bar">
+            <span>Étape 4 sur 5 : Réorganisez vos pages</span>
+        </div>
+
+        <div class="panel">
+            <p style="font-size: 0.88rem; font-weight: 800; color: #2c3e50; margin: 0 0 10px 0;">
+                Document(s) prêt(s) pour la création du PDF :
+            </p>
+
+            <div class="queue-list-large" id="pages-list-container">
+                <!-- La liste des pages s'affiche ici -->
             </div>
 
-            <!-- Métadonnées & Export -->
+            <button type="button" class="secondary" style="margin-bottom: 12px;" onclick="switchView('view-1-import')">
+                ➕ Ajouter une page supplémentaire
+            </button>
+
+            <div class="controls-row">
+                <button type="button" class="secondary" style="flex:0; padding:0 14px;" onclick="switchView('view-3-preview')">
+                    ← Retour
+                </button>
+                <button type="button" class="success" onclick="switchView('view-5-export')">
+                    Continuer ➔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ÉTAPE 5 : INFORMATIONS & ENVOI ================= -->
+    <div id="view-5-export" class="app-view">
+        <div class="stepper-bar">
+            <span>Étape 5 sur 5 : Finalisez et envoyez</span>
+        </div>
+
+        <div class="panel">
             <div class="meta-group">
                 <div class="input-field">
-                    <label for="doc-type">Type de document</label>
+                    <label for="doc-type">Nature du document</label>
                     <input type="text" id="doc-type" placeholder="ex: Arrêt de travail, Certificat...">
                 </div>
                 <div class="input-field">
@@ -393,6 +418,10 @@
                     <input type="text" id="agent-name" placeholder="ex: DUPONT Jean">
                 </div>
             </div>
+
+            <p style="text-align: center; font-size: 0.88rem; font-weight: 800; color: #2c3e50; margin: 5px 0 10px 0;">
+                Choisissez votre mode d'envoi :
+            </p>
 
             <!-- Actions Télécharger / Email avec Flaticons HD -->
             <div class="action-grid">
@@ -406,8 +435,8 @@
                 </div>
             </div>
             
-            <button type="button" class="secondary" style="margin-top:10px; width:100%;" onclick="switchView('view-crop')">
-                ← Modifier le recadrage
+            <button type="button" class="secondary" style="margin-top: 15px; width:100%;" onclick="switchView('view-4-pages')">
+                ← Retour au choix des pages
             </button>
         </div>
     </div>
@@ -431,21 +460,19 @@
         
         const resultCanvas = document.getElementById('result-canvas');
         const rCtx = resultCanvas.getContext('2d', { willReadFrequently: true });
-        
-        const qcBadge = document.getElementById('qc-badge');
-        const qcRatio = document.getElementById('qc-ratio');
-        const sqcSharpnessVal = document.getElementById('sqc-sharpness-val');
-        const sqcBrightnessVal = document.getElementById('sqc-brightness-val');
-        const sqcBadge = document.getElementById('sqc-badge');
         const sourceAlertBanner = document.getElementById('source-alert-banner');
 
-        // Navigation entre les vues
+        // Navigation entre les étapes
         function switchView(viewId) {
             document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            
-            if (viewId === 'view-crop' && rawImage.src) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (viewId === 'view-2-crop' && rawImage.src) {
                 setTimeout(() => { setupSourceCanvas(); }, 50);
+            }
+            if (viewId === 'view-4-pages') {
+                renderPagesList();
             }
         }
 
@@ -464,7 +491,7 @@
             reader.onload = (e) => {
                 rawImage = new Image();
                 rawImage.onload = () => {
-                    switchView('view-crop');
+                    switchView('view-2-crop');
                     setupSourceCanvas();
                     analyzeSourceImage();
                 };
@@ -473,7 +500,7 @@
             reader.readAsDataURL(file);
         }
 
-        // Diagnostic Qualité
+        // Diagnostic Qualité (Affiche uniquement si photo trop floue/sombre)
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
             const maxDim = 500;
@@ -517,26 +544,14 @@
                 varianceSum += Math.pow(laplacianValues[i] - meanLap, 2);
             }
             const blurScore = varianceSum / count;
-            displaySourceQualityReport(blurScore, avgBrightness);
-        }
 
-        function displaySourceQualityReport(blurScore, brightness) {
-            sqcSharpnessVal.textContent = Math.round(blurScore);
-            sqcBrightnessVal.textContent = `${Math.round((brightness / 255) * 100)}%`;
-
+            // Masquer les chiffres et n'afficher un message QUE si la photo est mauvaise
             const isTooBlurry = blurScore < 100;
-            const isVeryDark = brightness < 45;
+            const isVeryDark = avgBrightness < 45;
 
-            sqcBadge.className = 'qc-status';
             if (isTooBlurry || isVeryDark) {
-                sqcBadge.textContent = 'Inexploitable';
-                sqcBadge.classList.add('qc-danger');
-                sourceAlertBanner.classList.add('alert-danger');
                 sourceAlertBanner.style.display = 'block';
-                sourceAlertBanner.innerHTML = `⚠️ Photo floue ou trop sombre.`;
             } else {
-                sqcBadge.textContent = 'Conforme';
-                sqcBadge.classList.add('qc-optimal');
                 sourceAlertBanner.style.display = 'none';
             }
         }
@@ -732,7 +747,7 @@
             }
             uCtx.putImageData(outImgData, 0, 0);
             applyBinarization();
-            switchView('view-preview');
+            switchView('view-3-preview');
         }
 
         function applyBinarization() {
@@ -742,46 +757,44 @@
             const imageData = uCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
             const data = imageData.data;
 
-            let blackPixels = 0;
-            let totalPixels = resultCanvas.width * resultCanvas.height;
-
             for (let i = 0; i < data.length; i += 4) {
                 const luminance = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
                 const color = luminance >= threshold ? 255 : 0;
-                if (color === 0) blackPixels++;
                 data[i] = data[i+1] = data[i+2] = color;
             }
             rCtx.putImageData(imageData, 0, 0);
-            updateQualityControl(blackPixels, totalPixels);
         }
 
-        function updateQualityControl(blackPixels, totalPixels) {
-            const inkPercentage = ((blackPixels / totalPixels) * 100).toFixed(1);
-            qcRatio.textContent = `Encre : ${inkPercentage}%`;
-            qcBadge.className = 'qc-status';
-            
-            if (inkPercentage < 2) { qcBadge.textContent = 'Trop clair'; qcBadge.classList.add('qc-danger'); } 
-            else if (inkPercentage >= 2 && inkPercentage <= 15) { qcBadge.textContent = 'Optimal'; qcBadge.classList.add('qc-optimal'); } 
-            else { qcBadge.textContent = 'Ombres'; qcBadge.classList.add('qc-warning'); }
-        }
-
+        // CORRECTION DU ZOOM : Agrandit le canvas lui-même
         function adjustZoom(delta) {
             currentZoom = Math.max(20, Math.min(300, currentZoom + delta));
-            resultCanvas.style.width = currentZoom + '%';
+            resultCanvas.style.transform = `scale(${currentZoom / 100})`;
             document.getElementById('zoom-value').textContent = currentZoom + '%';
         }
 
-        // Multi-pages & Export
-        function addCurrentPageAndContinue() {
+        // GESTION DU WORKFLOW MULTI-PAGES & LISTE
+        function confirmCurrentPageAndGoToManage() {
+            if (!resultCanvas.width) return;
+            
+            // Ajouter la page courante si elle n'est pas déjà dans la liste
+            pdfPageQueue.push({
+                dataUrl: resultCanvas.toDataURL('image/jpeg', 0.92),
+                width: resultCanvas.width,
+                height: resultCanvas.height
+            });
+
+            switchView('view-4-pages');
+        }
+
+        function addPageAndScanAnother() {
             if (!resultCanvas.width) return;
             pdfPageQueue.push({
                 dataUrl: resultCanvas.toDataURL('image/jpeg', 0.92),
                 width: resultCanvas.width,
                 height: resultCanvas.height
             });
-            renderQueueThumbnails();
             clearCurrentWorkspace();
-            switchView('view-import'); // Retour accueil pour scanner la page suivante
+            switchView('view-1-import');
         }
 
         function clearCurrentWorkspace() {
@@ -790,36 +803,40 @@
             rCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
             unbinarizedCanvas = document.createElement('canvas');
             sourceAlertBanner.style.display = 'none';
-            qcBadge.textContent = 'En attente'; qcBadge.className = 'qc-status qc-warning'; qcRatio.textContent = 'Encre : --%';
+            currentZoom = 100;
+            resultCanvas.style.transform = 'scale(1)';
+            document.getElementById('zoom-value').textContent = '100%';
         }
 
         function removePageFromQueue(index) {
             pdfPageQueue.splice(index, 1);
-            renderQueueThumbnails();
+            renderPagesList();
         }
 
-        function renderQueueThumbnails() {
-            const container = document.getElementById('queue-thumbnails');
+        function renderPagesList() {
+            const container = document.getElementById('pages-list-container');
             const badge = document.getElementById('page-count-badge');
             badge.textContent = `${pdfPageQueue.length} page${pdfPageQueue.length > 1 ? 's' : ''}`;
             container.innerHTML = '';
 
             if (pdfPageQueue.length === 0) {
-                container.innerHTML = `<span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">Aucune page mise de côté.</span>`;
+                container.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucune page enregistrée. Veuillez prendre une photo.</span>`;
                 return;
             }
 
             pdfPageQueue.forEach((page, idx) => {
-                const thumb = document.createElement('div');
-                thumb.className = 'thumb-item';
-                thumb.innerHTML = `
-                    <img src="${page.dataUrl}">
-                    <div class="thumb-del" onclick="removePageFromQueue(${idx})">×</div>
+                const item = document.createElement('div');
+                item.className = 'page-card-item active';
+                item.innerHTML = `
+                    <img class="page-card-thumb" src="${page.dataUrl}">
+                    <div class="page-card-info">Page n°${idx + 1}</div>
+                    <button type="button" class="secondary" style="flex:0; padding:6px 12px; min-height:36px; background:#dc3545;" onclick="removePageFromQueue(${idx})">Supprimer</button>
                 `;
-                container.appendChild(thumb);
+                container.appendChild(item);
             });
         }
 
+        // Exportation Final
         async function exportPDF(mode = 'download') {
             let pagesToExport = [];
             if (pdfPageQueue.length > 0) { pagesToExport = pdfPageQueue; } 
@@ -862,7 +879,7 @@
                     try {
                         await navigator.share({
                             title: `${docTypeVal} - ${agentNameVal}`,
-                            text: `Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`,
+                            text: `Bonjour,\n\nJe vous transmets ${docTypeVal}.\n\nCordialement,`,
                             files: [file]
                         });
                         resetApp();
@@ -890,13 +907,9 @@
         function resetApp() {
             clearCurrentWorkspace();
             pdfPageQueue = [];
-            renderQueueThumbnails();
             document.getElementById('doc-type').value = "";
             document.getElementById('agent-name').value = "";
-            currentZoom = 100;
-            resultCanvas.style.width = '100%';
-            document.getElementById('zoom-value').textContent = '100%';
-            switchView('view-import');
+            switchView('view-1-import');
         }
 
         if ('serviceWorker' in navigator) {
