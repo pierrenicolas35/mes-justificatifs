@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Optimisation des justificatifs</title>
+
+    <!-- Meta App Mobile & PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0056b3">
+
+    <!-- Favicon & Touch Icon SVG -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230056b3'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/><circle cx='17' cy='17' r='4' fill='%2328a745'/><path d='M15.8 17l-1.2-1.2-.8.8 2 2 3.2-3.2-.8-.8z' fill='white'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230056b3'><rect width='24' height='24' rx='5' fill='%230056b3'/><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z' fill='white'/></svg>">
+
+    <!-- jsPDF pour l'export A4 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0056b3;
+            --primary-hover: #003d82;
+            --success: #28a745;
+            --bg: #f4f6f9;
+            --panel: #ffffff;
+            --border: #ced4da;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Header Mobile Compact */
+        .header { text-align: center; margin: 5px 0 12px 0; width: 100%; }
+        .header h2 { margin: 0 0 4px 0; font-size: 1.25rem; color: #1a252f; }
+        .badge-secu { 
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--success); 
+            font-weight: 600; 
+            font-size: 0.75rem; 
+            background: #e8f5e9;
+            padding: 3px 10px;
+            border-radius: 15px;
+            border: 1px solid #c8e6c9;
+        }
+
+        /* Layout Vertical Mobile Monocolonne */
+        .mobile-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .panel {
+            background: var(--panel);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        .step-number {
+            background-color: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .step-title { font-size: 0.95rem; font-weight: 700; color: #2c3e50; margin: 0; }
+
+        /* Bouton Prendre Photo / Drop Mobile */
+        #drop-zone {
+            border: 2px dashed var(--primary);
+            border-radius: 10px;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+
+        #workspace { display: none; flex-direction: column; width: 100%; }
+
+        .crop-wrapper {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            max-height: 420px;
+            background-color: #111;
+            margin-bottom: 10px;
+            overflow: hidden;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
+
+        /* Étape 2 : Bouton Action Transfert Large Mobile */
+        .btn-transfer-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 4px 0;
+        }
+        .btn-transfer-mobile {
+            background: linear-gradient(135deg, var(--primary), #003d82);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+        }
+        .btn-transfer-mobile svg { width: 20px; height: 20px; fill: white; }
+
+        /* Aperçu Mobile */
+        .preview-wrapper {
+            width: 100%; 
+            height: 45vh;
+            max-height: 320px;
+            background: #e9ecef;
+            overflow: auto;
+            border-radius: 8px; 
+            border: 1px solid var(--border);
+            position: relative;
+            margin-bottom: 10px;
+        }
+        #result-canvas { display: block; margin: 0 auto; width: 100%; background: white; }
+
+        /* Queue Multi-Pages Mobile */
+        .page-queue-container {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .queue-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; }
+        .queue-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; min-height: 60px; }
+        .thumb-item {
+            position: relative; flex-shrink: 0; width: 45px; height: 58px;
+            border: 2px solid var(--primary); border-radius: 4px; overflow: hidden; background: white;
+        }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-item .thumb-del {
+            position: absolute; top: 1px; right: 1px; background: rgba(220,53,69,0.9);
+            color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 11px;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
+        }
+
+        /* Indicateurs Qualité & UI */
+        .qc-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #f8f9fa; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
+            margin-bottom: 8px; font-size: 0.78rem; font-weight: 600;
+        }
+        .qc-status { padding: 2px 6px; border-radius: 10px; color: white; font-size: 0.72rem; font-weight: 700; }
+        .qc-optimal { background-color: #28a745; }
+        .qc-warning { background-color: #fd7e14; }
+        .qc-danger { background-color: #dc3545; }
+
+        #source-alert-banner {
+            display: none; padding: 8px; border-radius: 6px; margin-bottom: 8px;
+            font-size: 0.78rem; font-weight: 600; line-height: 1.3;
+        }
+        #source-alert-banner.alert-danger { background-color: #f8d7da; color: #842029; }
+        #source-alert-banner.alert-warning { background-color: #fff3cd; color: #664d03; }
+        #source-alert-banner.alert-success { background-color: #d1e7dd; color: #0f5132; }
+
+        .meta-group {
+            display: flex; flex-direction: column; gap: 8px;
+            background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+        .input-field { display: flex; flex-direction: column; gap: 3px; }
+        .input-field label { font-size: 0.75rem; font-weight: 700; }
+        .input-field input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
+
+        .controls-row { display: flex; gap: 6px; }
+        .action-buttons-group { display: flex; flex-direction: column; gap: 8px; }
+
+        button {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            background-color: var(--primary); color: white; border: none; padding: 12px 10px;
+            border-radius: 8px; font-weight: 600; font-size: 0.85rem; min-height: 44px; flex: 1;
+        }
+        button.secondary { background-color: #6c757d; }
+        button.success { background-color: var(--success); font-size: 0.9rem; }
+        button.email-btn { background-color: #17a2b8; font-size: 0.9rem; } /* Bouton Mail Bleu Cyan */
+        button.outline { background-color: transparent; border: 1.5px solid #6c757d; color: #6c757d; }
+        button.icon-btn-compact { flex: 0; min-width: 44px; padding: 0; }
+        button svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .footer { margin-top: 1rem; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Optimisation des justificatifs</h2>
+        <span class="badge-secu">
+            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor;">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+            </svg>
+            Traitement 100% Local (Mobile)
+        </span>
+    </div>
+
+    <div class="mobile-layout">
+        
+        <!-- ÉTAPE 1 : IMPORT / CAMERA ET RECADRAGE -->
+        <div class="panel">
+            <div class="step-header">
+                <div class="step-number">1</div>
+                <h3 class="step-title">Capture & Redressement</h3>
+            </div>
+
+            <!-- Déclencheur Caméra Smartphone -->
+            <div id="drop-zone">
+                <svg viewBox="0 0 24 24" style="width: 40px; height: 44px; fill: var(--primary); margin-bottom: 6px;">
+                    <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                </svg>
+                <p style="margin:0; font-weight: 700; font-size: 0.9rem;">Prendre une photo / Parcourir</p>
+                <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
+            </div>
+
+            <div id="workspace">
+                <div id="source-alert-banner"></div>
+
+                <div class="qc-bar">
+                    <div>Netteté : <strong id="sqc-sharpness-val">--</strong></div>
+                    <div>Luminosité : <strong id="sqc-brightness-val">--</strong></div>
+                    <span id="sqc-badge" class="qc-status qc-optimal">Diag</span>
+                </div>
+
+                <div class="crop-wrapper">
+                    <canvas id="source-canvas"></canvas>
+                </div>
+                
+                <div class="controls-row">
+                    <button type="button" class="secondary icon-btn-compact" onclick="rotateSource(-90)">
+                        <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.52-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.63 3.89l1.41-1.42c-.52-.75-.9-1.6-1.02-2.47zM12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8z"/></svg>
+                    </button>
+                    <button type="button" class="secondary icon-btn-compact" onclick="rotateSource(90)">
+                        <svg viewBox="0 0 24 24"><path d="M15.55 5.55L14.14 7c.52.75.9 1.6 1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.92zM12 4c4.42 0 8 3.58 8 8 0 1.57-.46 3.03-1.24 4.26l-1.46-1.46c.45-.83.7-1.79.7-2.8 0-3.31-2.69-6-6-6v3L8 5l4-4v3zm5.19 11.47c-.5.75-.88 1.6-1.02 2.47h2.02c-.17-1.39-.72-2.73-1.63-3.89l-1.37 1.42zM12 20c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 9.74C4.46 10.97 4 12.43 4 14c0 4.42 3.58 8 8 8v-3l4 4-4 4v-3z"/></svg>
+                    </button>
+                    <button type="button" class="secondary" onclick="resetPoints()">Reset coins</button>
+                    <button type="button" class="outline" onclick="changeSourceImage()">Reprendre</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÉTAPE 2 : BOUTON VALIDER APERÇU MOBILE -->
+        <div class="btn-transfer-wrapper">
+            <button type="button" class="btn-transfer-mobile" onclick="triggerManualWarp()">
+                <span>Étape 2 : Envoyer vers l'aperçu</span>
+                <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+            </button>
+        </div>
+
+        <!-- ÉTAPE 3 & 4 : CONTRASTE, MULTI-PAGES & EXPORT -->
+        <div class="panel">
+            <div class="step-header">
+                <div class="step-number">3</div>
+                <h3 class="step-title">Contraste & Multi-pages</h3>
+            </div>
+
+            <label for="threshold" style="font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Ajustement du contraste</label>
+            <input type="range" id="threshold" min="50" max="220" value="130" style="width:100%; margin-bottom: 8px;" oninput="applyBinarization()">
+            
+            <div class="qc-bar">
+                <span>Rendu impression :</span>
+                <span id="qc-badge" class="qc-status qc-optimal">En attente</span>
+                <span id="qc-ratio" style="color: var(--text-muted);">Encre : --%</span>
+            </div>
+
+            <div class="preview-wrapper">
+                <canvas id="result-canvas"></canvas>
+            </div>
+
+            <!-- Queue Multi-Pages (Vignettes) -->
+            <div class="page-queue-container">
+                <div class="queue-header">
+                    <span>Fusion PDF : <strong id="page-count-badge">0 page</strong></span>
+                    <button type="button" class="success" style="padding: 4px 8px; font-size: 0.75rem; min-height: auto; flex: none;" onclick="addCurrentPageAndReset()">
+                        + Valider page
+                    </button>
+                </div>
+                <div class="queue-thumbnails" id="queue-thumbnails">
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">Aucune page mise de côté.</span>
+                </div>
+            </div>
+
+            <!-- ÉTAPE 4 : MÉTADONNÉES MOBILE ET EXPORT -->
+            <div class="meta-group">
+                <div class="input-field">
+                    <label for="doc-type">Type de document</label>
+                    <input type="text" id="doc-type" placeholder="Nature du document...">
+                </div>
+                <div class="input-field">
+                    <label for="agent-name">Nom Prénom Agent</label>
+                    <input type="text" id="agent-name" placeholder="Nom et prénom...">
+                </div>
+            </div>
+            
+            <div class="action-buttons-group">
+                <button type="button" class="success" onclick="exportPDF('download')">
+                    <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    4. Télécharger le PDF A4
+                </button>
+                
+                <button type="button" class="email-btn" onclick="exportPDF('email')">
+                    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    4. Envoyer directement par e-mail
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        Application développée par P.NICOLAS
+    </div>
+
+    <script>
+        let rawImage = new Image();
+        let corners = [];
+        let activePoint = -1;
+        let activeEdge = -1;
+        let dragStartPos = null;
+        let dragStartCorners = null;
+
+        let unbinarizedCanvas = document.createElement('canvas');
+        let pdfPageQueue = [];
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const workspace = document.getElementById('workspace');
+        const sourceCanvas = document.getElementById('source-canvas');
+        const sCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const resultCanvas = document.getElementById('result-canvas');
+        const rCtx = resultCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const qcBadge = document.getElementById('qc-badge');
+        const qcRatio = document.getElementById('qc-ratio');
+        const sqcSharpnessVal = document.getElementById('sqc-sharpness-val');
+        const sqcBrightnessVal = document.getElementById('sqc-brightness-val');
+        const sqcBadge = document.getElementById('sqc-badge');
+        const sourceAlertBanner = document.getElementById('source-alert-banner');
+
+        // Initialisation métadonnées
+        document.getElementById('doc-type').value = "";
+        document.getElementById('agent-name').value = "";
+
+        // --- 1. CAPTURE / DRAG & DROP ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) loadFile(e.target.files[0]);
+        });
+
+        function loadFile(file) {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                rawImage.onload = () => {
+                    dropZone.style.display = 'none';
+                    workspace.style.display = 'flex';
+                    setupSourceCanvas();
+                    analyzeSourceImage();
+                    resetPoints(false);
+                };
+                rawImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function changeSourceImage() {
+            fileInput.value = '';
+            fileInput.click();
+        }
+
+        // --- CONTROLE QUALITÉ SOURCE ---
+        function analyzeSourceImage() {
+            const checkCanvas = document.createElement('canvas');
+            const maxDim = 500;
+            let w = rawImage.width; let h = rawImage.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            checkCanvas.width = w; checkCanvas.height = h;
+            const cCtx = checkCanvas.getContext('2d', { willReadFrequently: true });
+            cCtx.drawImage(rawImage, 0, 0, w, h);
+
+            const imageData = cCtx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            const gray = new Float32Array(w * h);
+            let sumLuminance = 0;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                gray[i / 4] = lum;
+                sumLuminance += lum;
+            }
+
+            const avgBrightness = sumLuminance / (w * h);
+            let laplacianSum = 0; let count = 0;
+            const laplacianValues = [];
+
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const idx = y * w + x;
+                    const lap = Math.abs(4 * gray[idx] - gray[idx - 1] - gray[idx + 1] - gray[idx - w] - gray[idx + w]);
+                    laplacianValues.push(lap);
+                    laplacianSum += lap;
+                    count++;
+                }
+            }
+
+            const meanLap = laplacianSum / count;
+            let varianceSum = 0;
+            for (let i = 0; i < laplacianValues.length; i++) {
+                varianceSum += Math.pow(laplacianValues[i] - meanLap, 2);
+            }
+            const blurScore = varianceSum / count;
+            displaySourceQualityReport(blurScore, avgBrightness);
+        }
+
+        function displaySourceQualityReport(blurScore, brightness) {
+            sqcSharpnessVal.textContent = Math.round(blurScore);
+            sqcBrightnessVal.textContent = `${Math.round((brightness / 255) * 100)}%`;
+
+            const isTooBlurry = blurScore < 100;
+            const isVeryDark = brightness < 45;
+
+            sqcBadge.className = 'qc-status';
+            sourceAlertBanner.className = '';
+
+            if (isTooBlurry || isVeryDark) {
+                sqcBadge.textContent = 'Inexploitable';
+                sqcBadge.classList.add('qc-danger');
+                sourceAlertBanner.classList.add('alert-danger');
+                sourceAlertBanner.style.display = 'block';
+                sourceAlertBanner.innerHTML = `⚠️ Photo floue ou trop sombre.`;
+            } else {
+                sqcBadge.textContent = 'Conforme';
+                sqcBadge.classList.add('qc-optimal');
+                sourceAlertBanner.style.display = 'none';
+            }
+        }
+
+        // --- 2. MANIPULATION DES POINTS DE PERSPECTIVE ---
+        function setupSourceCanvas() {
+            sourceCanvas.width = rawImage.width;
+            sourceCanvas.height = rawImage.height;
+            drawSource();
+        }
+
+        function resetPoints(autoWarp = false) {
+            const w = sourceCanvas.width;
+            const h = sourceCanvas.height;
+            const padX = w * 0.05;
+            const padY = h * 0.05;
+
+            corners = [
+                { x: padX, y: padY },
+                { x: w - padX, y: padY },
+                { x: w - padX, y: h - padY },
+                { x: padX, y: h - padY }
+            ];
+            drawSource();
+            if (autoWarp) triggerManualWarp();
+        }
+
+        function drawSource() {
+            sCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+            sCtx.drawImage(rawImage, 0, 0);
+
+            sCtx.beginPath();
+            sCtx.moveTo(corners[0].x, corners[0].y);
+            for (let i = 1; i < 4; i++) { sCtx.lineTo(corners[i].x, corners[i].y); }
+            sCtx.closePath();
+            sCtx.fillStyle = 'rgba(0, 86, 179, 0.2)';
+            sCtx.fill();
+            sCtx.strokeStyle = '#0056b3';
+            sCtx.lineWidth = Math.max(3, sourceCanvas.width / 250);
+            sCtx.stroke();
+
+            const edgeRadius = Math.max(10, sourceCanvas.width / 90);
+            for (let i = 0; i < 4; i++) {
+                const nextIdx = (i + 1) % 4;
+                const midX = (corners[i].x + corners[nextIdx].x) / 2;
+                const midY = (corners[i].y + corners[nextIdx].y) / 2;
+
+                sCtx.beginPath();
+                sCtx.arc(midX, midY, edgeRadius, 0, Math.PI * 2);
+                sCtx.fillStyle = '#0056b3';
+                sCtx.fill();
+                sCtx.strokeStyle = '#ffffff';
+                sCtx.lineWidth = edgeRadius / 3;
+                sCtx.stroke();
+            }
+
+            const radius = Math.max(14, sourceCanvas.width / 60);
+            corners.forEach((pt) => {
+                sCtx.beginPath();
+                sCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+                sCtx.fillStyle = '#ffffff';
+                sCtx.fill();
+                sCtx.strokeStyle = '#0056b3';
+                sCtx.lineWidth = radius / 3;
+                sCtx.stroke();
+            });
+        }
+
+        function getCanvasCoords(e) {
+            const rect = sourceCanvas.getBoundingClientRect();
+            const scaleX = sourceCanvas.width / rect.width;
+            const scaleY = sourceCanvas.height / rect.height;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function distanceToSegment(pt, p1, p2) {
+            const dx = p2.x - p1.x; const dy = p2.y - p1.y;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return Math.hypot(pt.x - p1.x, pt.y - p1.y);
+            let t = Math.max(0, Math.min(1, ((pt.x - p1.x) * dx + (pt.y - p1.y) * dy) / lenSq));
+            return Math.hypot(pt.x - (p1.x + t * dx), pt.y - (p1.y + t * dy));
+        }
+
+        function handleStart(e) {
+            const pos = getCanvasCoords(e);
+            const pointRadius = Math.max(40, sourceCanvas.width / 25);
+            
+            activePoint = corners.findIndex(pt => Math.hypot(pt.x - pos.x, pt.y - pos.y) < pointRadius);
+            if (activePoint !== -1) { activeEdge = -1; return; }
+
+            const edgeThreshold = Math.max(35, sourceCanvas.width / 30);
+            for (let i = 0; i < 4; i++) {
+                const nextIdx = (i + 1) % 4;
+                if (distanceToSegment(pos, corners[i], corners[nextIdx]) < edgeThreshold) {
+                    activeEdge = i;
+                    dragStartPos = pos;
+                    dragStartCorners = JSON.parse(JSON.stringify(corners));
+                    return;
+                }
+            }
+            activePoint = -1; activeEdge = -1;
+        }
+
+        function handleMove(e) {
+            if (activePoint === -1 && activeEdge === -1) return;
+            e.preventDefault();
+            const pos = getCanvasCoords(e);
+
+            if (activePoint !== -1) {
+                corners[activePoint].x = Math.max(0, Math.min(sourceCanvas.width, pos.x));
+                corners[activePoint].y = Math.max(0, Math.min(sourceCanvas.height, pos.y));
+            } else if (activeEdge !== -1) {
+                const idx1 = activeEdge;
+                const idx2 = (activeEdge + 1) % 4;
+                const deltaX = pos.x - dragStartPos.x;
+                const deltaY = pos.y - dragStartPos.y;
+
+                corners[idx1].x = Math.max(0, Math.min(sourceCanvas.width, dragStartCorners[idx1].x + deltaX));
+                corners[idx1].y = Math.max(0, Math.min(sourceCanvas.height, dragStartCorners[idx1].y + deltaY));
+                corners[idx2].x = Math.max(0, Math.min(sourceCanvas.width, dragStartCorners[idx2].x + deltaX));
+                corners[idx2].y = Math.max(0, Math.min(sourceCanvas.height, dragStartCorners[idx2].y + deltaY));
+            }
+            drawSource();
+        }
+
+        function handleEnd() { activePoint = -1; activeEdge = -1; }
+
+        sourceCanvas.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        sourceCanvas.addEventListener('touchstart', handleStart, { passive: false });
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
+
+        function rotateSource(degrees) {
+            const tempCanvas = document.createElement('canvas');
+            const tCtx = tempCanvas.getContext('2d');
+            if (Math.abs(degrees) === 90) { tempCanvas.width = rawImage.height; tempCanvas.height = rawImage.width; } 
+            else { tempCanvas.width = rawImage.width; tempCanvas.height = rawImage.height; }
+
+            tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+            tCtx.rotate((degrees * Math.PI) / 180);
+            tCtx.drawImage(rawImage, -rawImage.width / 2, -rawImage.height / 2);
+
+            rawImage = new Image();
+            rawImage.onload = () => { setupSourceCanvas(); analyzeSourceImage(); resetPoints(false); };
+            rawImage.src = tempCanvas.toDataURL();
+        }
+
+        // --- 3. APERÇU ET BINARISATION ---
+        function triggerManualWarp() {
+            if (!rawImage.src || sourceCanvas.width === 0) {
+                alert("Veuillez d'abord prendre ou charger une photo.");
+                return;
+            }
+
+            const topW = Math.hypot(corners[1].x - corners[0].x, corners[1].y - corners[0].y);
+            const botW = Math.hypot(corners[2].x - corners[3].x, corners[2].y - corners[3].y);
+            const leftH = Math.hypot(corners[3].x - corners[0].x, corners[3].y - corners[0].y);
+            const rightH = Math.hypot(corners[2].x - corners[1].x, corners[2].y - corners[1].y);
+
+            const targetW = Math.round(Math.max(topW, botW));
+            const targetH = Math.round(Math.max(leftH, rightH));
+
+            unbinarizedCanvas.width = targetW; unbinarizedCanvas.height = targetH;
+            resultCanvas.width = targetW; resultCanvas.height = targetH;
+
+            const cleanCanvas = document.createElement('canvas');
+            cleanCanvas.width = sourceCanvas.width; cleanCanvas.height = sourceCanvas.height;
+            cleanCanvas.getContext('2d').drawImage(rawImage, 0, 0);
+
+            const uCtx = unbinarizedCanvas.getContext('2d');
+            const imgData = cleanCanvas.getContext('2d').getImageData(0, 0, cleanCanvas.width, cleanCanvas.height);
+            const outImgData = uCtx.createImageData(targetW, targetH);
+
+            const src = imgData.data; const dst = outImgData.data;
+
+            for (let y = 0; y < targetH; y++) {
+                const v = y / targetH;
+                for (let x = 0; x < targetW; x++) {
+                    const u = x / targetW;
+                    const srcX = (1 - u) * (1 - v) * corners[0].x + u * (1 - v) * corners[1].x + u * v * corners[2].x + (1 - u) * v * corners[3].x;
+                    const srcY = (1 - u) * (1 - v) * corners[0].y + u * (1 - v) * corners[1].y + u * v * corners[2].y + (1 - u) * v * corners[3].y;
+                    const ix = Math.floor(srcX); const iy = Math.floor(srcY);
+
+                    if (ix >= 0 && ix < cleanCanvas.width && iy >= 0 && iy < cleanCanvas.height) {
+                        const srcIdx = (iy * cleanCanvas.width + ix) * 4;
+                        const dstIdx = (y * targetW + x) * 4;
+                        dst[dstIdx] = src[srcIdx]; dst[dstIdx + 1] = src[srcIdx + 1]; dst[dstIdx + 2] = src[srcIdx + 2]; dst[dstIdx + 3] = 255;
+                    }
+                }
+            }
+            uCtx.putImageData(outImgData, 0, 0);
+            applyBinarization();
+
+            resultCanvas.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function applyBinarization() {
+            if (!unbinarizedCanvas.width) return;
+            const threshold = parseInt(document.getElementById('threshold').value);
+            const uCtx = unbinarizedCanvas.getContext('2d');
+            const imageData = uCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
+            const data = imageData.data;
+
+            let blackPixels = 0;
+            let totalPixels = resultCanvas.width * resultCanvas.height;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const luminance = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                const color = luminance >= threshold ? 255 : 0;
+                if (color === 0) blackPixels++;
+                data[i] = data[i+1] = data[i+2] = color;
+            }
+            rCtx.putImageData(imageData, 0, 0);
+            updateQualityControl(blackPixels, totalPixels);
+        }
+
+        function updateQualityControl(blackPixels, totalPixels) {
+            const inkPercentage = ((blackPixels / totalPixels) * 100).toFixed(1);
+            qcRatio.textContent = `Encre : ${inkPercentage}%`;
+            qcBadge.className = 'qc-status';
+            
+            if (inkPercentage < 2) { qcBadge.textContent = 'Trop clair'; qcBadge.classList.add('qc-danger'); } 
+            else if (inkPercentage >= 2 && inkPercentage <= 15) { qcBadge.textContent = 'Optimal'; qcBadge.classList.add('qc-optimal'); } 
+            else { qcBadge.textContent = 'Ombres'; qcBadge.classList.add('qc-warning'); }
+        }
+
+        // --- 4. MULTI-PAGES & EXPORT ---
+        function addCurrentPageAndReset() {
+            if (!resultCanvas.width) { alert("Veuillez d'abord générer l'aperçu."); return; }
+            pdfPageQueue.push({
+                dataUrl: resultCanvas.toDataURL('image/jpeg', 0.92),
+                width: resultCanvas.width,
+                height: resultCanvas.height
+            });
+            renderQueueThumbnails();
+            clearCurrentWorkspace();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function clearCurrentWorkspace() {
+            workspace.style.display = 'none'; dropZone.style.display = 'flex';
+            fileInput.value = ''; rawImage = new Image();
+            sCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+            rCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            unbinarizedCanvas = document.createElement('canvas');
+            sourceAlertBanner.style.display = 'none';
+            qcBadge.textContent = 'En attente'; qcBadge.className = 'qc-status qc-warning'; qcRatio.textContent = 'Encre : --%';
+        }
+
+        function removePageFromQueue(index) {
+            pdfPageQueue.splice(index, 1);
+            renderQueueThumbnails();
+        }
+
+        function renderQueueThumbnails() {
+            const container = document.getElementById('queue-thumbnails');
+            const badge = document.getElementById('page-count-badge');
+            badge.textContent = `${pdfPageQueue.length} page${pdfPageQueue.length > 1 ? 's' : ''}`;
+            container.innerHTML = '';
+
+            if (pdfPageQueue.length === 0) {
+                container.innerHTML = `<span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">Aucune page mise de côté.</span>`;
+                return;
+            }
+
+            pdfPageQueue.forEach((page, idx) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'thumb-item';
+                thumb.innerHTML = `
+                    <img src="${page.dataUrl}">
+                    <div class="thumb-del" onclick="removePageFromQueue(${idx})">×</div>
+                `;
+                container.appendChild(thumb);
+            });
+        }
+
+        function formatFilename() {
+            let docType = document.getElementById('doc-type').value.trim();
+            let agentName = document.getElementById('agent-name').value.trim();
+            docType = docType ? docType.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Document';
+            agentName = agentName ? agentName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Anonyme';
+            
+            const now = new Date();
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+            return `${docType}_${agentName}_${dateStr}.pdf`;
+        }
+
+        // --- EXPORT PDF AVEC OPTION 'DOWNLOAD' OU 'EMAIL' ---
+        async function exportPDF(mode = 'download') {
+            let pagesToExport = [];
+            if (pdfPageQueue.length > 0) { pagesToExport = pdfPageQueue; } 
+            else if (resultCanvas.width > 0) {
+                pagesToExport.push({
+                    dataUrl: resultCanvas.toDataURL('image/jpeg', 0.95),
+                    width: resultCanvas.width, height: resultCanvas.height
+                });
+            } else { alert("Veuillez d'abord prendre un document et générer son aperçu."); return; }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            pagesToExport.forEach((page, index) => {
+                if (index > 0) pdf.addPage();
+                const canvasRatio = page.width / page.height;
+                const pdfRatio = pdfWidth / pdfHeight;
+                let finalWidth = pdfWidth; let finalHeight = pdfHeight;
+
+                if (canvasRatio > pdfRatio) { finalHeight = pdfWidth / canvasRatio; } 
+                else { finalWidth = pdfHeight * canvasRatio; }
+
+                pdf.addImage(page.dataUrl, 'JPEG', (pdfWidth - finalWidth) / 2, (pdfHeight - finalHeight) / 2, finalWidth, finalHeight);
+            });
+
+            const fileName = formatFilename();
+
+            if (mode === 'email') {
+                const pdfBlob = pdf.output('blob');
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                // Tentative 1 : Partage natif mobile avec fichier (Web Share API)
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            title: 'Justificatif optimisé',
+                            text: `Veuillez trouver ci-joint le document : ${fileName}`,
+                            files: [file]
+                        });
+                        resetApp();
+                        return;
+                    } catch (err) {
+                        console.log("Partage annulé ou échoué, passage au mode fallback.");
+                    }
+                }
+
+                // Fallback : Téléchargement + Ouverture Mailto
+                pdf.save(fileName);
+                const subject = encodeURIComponent(`Justificatif - ${fileName.replace('.pdf', '')}`);
+                const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint le document justificatif optimisé (${fileName}).\n\nCordialement,`);
+                
+                setTimeout(() => {
+                    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+                }, 500);
+
+            } else {
+                // Mode Téléchargement classique
+                pdf.save(fileName);
+            }
+
+            resetApp();
+        }
+
+        function resetApp() {
+            clearCurrentWorkspace();
+            pdfPageQueue = [];
+            renderQueueThumbnails();
+            document.getElementById('doc-type').value = "";
+            document.getElementById('agent-name').value = "";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
