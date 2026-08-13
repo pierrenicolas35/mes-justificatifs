@@ -45,23 +45,23 @@
             display: none;
             flex-direction: column;
             width: 100vw;
-            min-height: 100vh;
-            padding: 15px;
+            height: 100vh; /* Fixé à la hauteur de l'écran */
+            padding: 12px;
             background: var(--bg);
-            overflow-y: auto; /* Garantit le scroll peu importe la taille de l'écran */
+            overflow-y: auto;
         }
         .app-view.active { display: flex; }
 
         /* --- EN-TÊTE COMMUN --- */
-        .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
+        .header { text-align: center; margin-bottom: 10px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
         
         .stepper-bar {
             background: var(--panel);
-            padding: 12px 15px;
+            padding: 10px 14px;
             border-radius: 12px;
             border: 2px solid var(--border);
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             font-size: 0.95rem;
             font-weight: 800;
             color: var(--text-dark);
@@ -79,10 +79,11 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
-        .instruction { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 15px; }
+        .instruction { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 10px; flex-shrink: 0;}
 
         /* --- BOUTONS --- */
         button {
@@ -95,27 +96,30 @@
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
         
-        .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
+        .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; padding-bottom: 5px; }
 
         /* --- ÉTAPE 1 : IMPORTATION --- */
+        .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: auto 0; }
         .btn-import-option {
             background: #ffffff; border: 2px solid var(--border); border-radius: 16px;
             padding: 25px 15px; display: flex; align-items: center; justify-content: flex-start;
             gap: 20px; cursor: pointer; font-weight: 800; font-size: 1.1rem; color: #2c3e50;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04); margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         }
         .btn-import-option:active { transform: scale(0.97); background: #f0f6ff; border-color: var(--primary); }
-        .btn-import-option img { width: 56px; height: 56px; object-fit: contain; }
+        .btn-import-option img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 
         /* --- ÉTAPE 2 : RECADRAGE --- */
         .fullscreen-crop-wrapper {
-            position: relative; width: 100%; height: 50vh; min-height: 350px;
+            position: relative; width: 100%; 
+            flex-grow: 1; /* Prend l'espace restant */
+            min-height: 200px; /* Évite de pousser les boutons hors de l'écran */
             background-color: #1a1a1a; border-radius: 12px; overflow: hidden;
-            display: flex; justify-content: center; align-items: center; margin-bottom: 15px;
+            display: flex; justify-content: center; align-items: center; margin-bottom: 10px;
         }
         #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
 
-        .toolbar-tools { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;}
+        .toolbar-tools { display: flex; justify-content: center; gap: 15px; margin-bottom: 5px; flex-shrink: 0; }
         button.icon-btn-tool {
             flex: 0 0 auto; width: 55px; height: 55px; padding: 0; background: #ffffff;
             border: 2px solid var(--border); border-radius: 12px; color: var(--primary);
@@ -123,27 +127,27 @@
         }
         button.icon-btn-tool svg { width: 28px; height: 28px; stroke: var(--primary); }
 
-        #source-alert-banner {
-            display: none; padding: 12px; border-radius: 10px; margin-bottom: 15px;
+        .alert-banner {
+            display: none; padding: 12px; border-radius: 10px; margin-bottom: 10px;
             font-size: 0.9rem; font-weight: 700; line-height: 1.4;
             background-color: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; text-align: center;
+            flex-shrink: 0;
         }
 
         /* --- ÉTAPE 3 : APERÇU ET ZOOM --- */
         .preview-scroll-container {
-            width: 100%; height: 40vh; min-height: 300px;
-            background: #e9ecef; overflow: auto; /* Active le scroll lors du zoom */
-            border-radius: 10px; border: 2px solid var(--border); margin-bottom: 15px;
+            width: 100%; flex-grow: 1; min-height: 250px;
+            background: #e9ecef; overflow: auto;
+            border-radius: 10px; border: 2px solid var(--border); margin-bottom: 10px;
         }
         #result-canvas {
             display: block; margin: 0 auto;
-            width: 100%; /* Sera modifié en % par le JS pour zoomer */
-            height: auto; background: white; transform-origin: top center; transition: width 0.15s ease-out;
+            width: 100%; height: auto; background: white; transform-origin: top center; transition: width 0.15s ease-out;
         }
-        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 15px; }
+        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 10px; flex-shrink: 0; }
 
         /* --- ÉTAPE 4 : REORGANISATION DES PAGES --- */
-        .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
         .page-card {
             display: flex; align-items: center; background: white; border: 2px solid var(--border);
             border-radius: 12px; padding: 8px 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
@@ -161,7 +165,7 @@
         .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; }
         .input-group input:focus { border-color: var(--primary); }
 
-        .action-buttons-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 10px; }
+        .action-buttons-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 5px; }
         .btn-export {
             display: flex; align-items: center; justify-content: flex-start; gap: 15px;
             padding: 15px; border-radius: 12px; border: 2px solid var(--border);
@@ -189,7 +193,7 @@
                 </div>
                 <div class="btn-import-option" onclick="triggerInput('gallery')">
                     <img src="https://cdn-icons-png.flaticon.com/512/1375/1375106.png" alt="Galerie">
-                    <span>Ouvrir la galerie</span>
+                    <span>Choisir dans la galerie</span>
                 </div>
             </div>
         </div>
@@ -203,12 +207,13 @@
         <div class="header"><h2>Optimisation des justificatifs</h2></div>
         <div class="stepper-bar">Étape 2 sur 5 : Cadrez le document</div>
 
-        <div id="source-alert-banner">
-            ⚠️ <strong>Attention :</strong> La photo semble très floue ou trop sombre. Le texte risque d'être illisible à l'impression.
+        <div id="source-alert-banner" class="alert-banner">
+            ⚠️ <strong>Attention :</strong> La photo semble floue ou trop sombre. Le texte risque d'être illisible.
         </div>
 
-        <p class="instruction" style="margin-bottom: 8px;">Ajustez le cadre bleu sur les bords de la feuille.</p>
+        <p class="instruction">Ajustez le cadre bleu sur les bords de la feuille.</p>
 
+        <!-- Le wrapper flexible qui prend la bonne hauteur sans pousser les boutons -->
         <div class="fullscreen-crop-wrapper">
             <canvas id="source-canvas"></canvas>
         </div>
@@ -236,28 +241,30 @@
         <div class="header"><h2>Optimisation des justificatifs</h2></div>
         <div class="stepper-bar">Étape 3 sur 5 : Effacez les ombres</div>
 
-        <div class="panel">
-            <p class="instruction">Faites glisser ce curseur pour que le fond soit bien blanc et le texte noir.</p>
-            <input type="range" id="threshold" min="50" max="220" value="130" oninput="applyBinarization()">
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <span style="font-weight: 800; font-size:0.9rem;">Aperçu du rendu :</span>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(-20)">-</button>
-                    <span id="zoom-value" style="font-size:0.9rem; font-weight:800; width:45px; text-align:center;">100%</span>
-                    <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(20)">+</button>
-                </div>
-            </div>
+        <div id="result-alert-banner" class="alert-banner"></div>
 
-            <!-- Conteneur qui scroll si l'image est zoomée (width > 100%) -->
-            <div class="preview-scroll-container">
-                <canvas id="result-canvas"></canvas>
+        <p class="instruction">Faites glisser ce curseur pour que le fond soit bien blanc et le texte noir.</p>
+        <input type="range" id="threshold" min="50" max="220" value="130" oninput="applyBinarization()">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
+            <span style="font-weight: 800; font-size:0.9rem;">Aperçu :</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(-20)">-</button>
+                <span id="zoom-value" style="font-size:0.9rem; font-weight:800; width:45px; text-align:center;">100%</span>
+                <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(20)">+</button>
             </div>
         </div>
 
+        <div class="preview-scroll-container">
+            <canvas id="result-canvas"></canvas>
+        </div>
+
+        <button type="button" class="secondary" style="flex:0; margin-bottom: 10px;" onclick="addPageAndScanAnother()">
+            ➕ Ajouter une autre page (Optionnel)
+        </button>
+
         <div class="nav-buttons">
             <button type="button" class="secondary" onclick="goToStep(2)">← Retour</button>
-            <!-- Ajouter la page courante et passer à la gestion des pages -->
             <button type="button" class="success" onclick="validateCurrentPage()">Continuer ➔</button>
         </div>
     </div>
@@ -268,19 +275,18 @@
         <div class="stepper-bar">Étape 4 sur 5 : Vos pages numérisées</div>
 
         <div class="panel">
-            <p class="instruction">Vérifiez vos pages. Vous pouvez changer leur ordre ou en ajouter d'autres.</p>
+            <p class="instruction">Vérifiez vos pages. Vous pouvez les réorganiser ou en ajouter.</p>
             
             <div class="pages-list-container" id="pages-list">
                 <!-- Les cartes de pages s'affichent ici -->
             </div>
 
             <button type="button" style="background:#eef4fc; color:var(--primary); border:2px dashed var(--primary); box-shadow:none;" onclick="addAnotherPage()">
-                ➕ Ajouter une autre page au document
+                ➕ Ajouter une page supplémentaire
             </button>
         </div>
 
         <div class="nav-buttons">
-            <!-- Si retour, on propose de remettre la dernière page en édition, ou on retourne juste à l'accueil si on supprime? Simplifions: Pas de retour arrière destructif. Juste Continuer -->
             <button type="button" class="success" style="width:100%;" onclick="goToStep(5)">Continuer vers l'envoi ➔</button>
         </div>
     </div>
@@ -290,8 +296,8 @@
         <div class="header"><h2>Optimisation des justificatifs</h2></div>
         <div class="stepper-bar">Étape 5 sur 5 : Finalisation</div>
 
-        <div class="panel">
-            <p class="instruction">Indiquez les informations du document avant l'envoi.</p>
+        <div class="panel" style="margin-top:auto; margin-bottom:auto;">
+            <p class="instruction">Indiquez les informations avant de l'envoyer.</p>
             
             <div class="input-group">
                 <label for="doc-type">Nature du document</label>
@@ -344,10 +350,8 @@
         function goToStep(stepIndex) {
             document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active'));
             document.getElementById(`step-${stepIndex}`).classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
 
             if (stepIndex === 2 && rawImage.src) {
-                // Laisse le temps à l'écran de s'afficher pour calculer les bonnes dimensions
                 setTimeout(() => { setupSourceCanvas(); }, 50);
             }
             if (stepIndex === 4) {
@@ -370,7 +374,7 @@
             reader.onload = (e) => {
                 rawImage = new Image();
                 rawImage.onload = () => {
-                    analyzeSourceImage(); // Vérifie la qualité discrètement
+                    analyzeSourceImage(); 
                     goToStep(2);
                 };
                 rawImage.src = e.target.result;
@@ -378,7 +382,6 @@
             reader.readAsDataURL(file);
         }
 
-        // --- CONTRÔLE QUALITÉ DISCRET ---
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
             const maxDim = 500;
@@ -423,7 +426,6 @@
             }
             const blurScore = varianceSum / count;
 
-            // N'affiche le bandeau que si la photo est mauvaise
             const banner = document.getElementById('source-alert-banner');
             if (blurScore < 100 || avgBrightness < 45) {
                 banner.style.display = 'block';
@@ -468,7 +470,6 @@
             sCtx.lineWidth = Math.max(3, sourceCanvas.width / 250);
             sCtx.stroke();
 
-            // Bordures
             const edgeRadius = Math.max(12, sourceCanvas.width / 90);
             for (let i = 0; i < 4; i++) {
                 const nextIdx = (i + 1) % 4;
@@ -479,7 +480,6 @@
                 sCtx.strokeStyle = '#ffffff'; sCtx.lineWidth = edgeRadius / 3; sCtx.stroke();
             }
 
-            // Coins
             const radius = Math.max(16, sourceCanvas.width / 50);
             corners.forEach((pt) => {
                 sCtx.beginPath(); sCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
@@ -507,7 +507,7 @@
 
         function handleStart(e) {
             const pos = getCanvasCoords(e);
-            const pointRadius = Math.max(45, sourceCanvas.width / 20); // Grandes zones tactiles
+            const pointRadius = Math.max(45, sourceCanvas.width / 20); 
             
             activePoint = corners.findIndex(pt => Math.hypot(pt.x - pos.x, pt.y - pos.y) < pointRadius);
             if (activePoint !== -1) { activeEdge = -1; return; }
@@ -580,8 +580,10 @@
 
             unbinarizedCanvas.width = targetW; unbinarizedCanvas.height = targetH;
             resultCanvas.width = targetW; resultCanvas.height = targetH;
-            resultCanvas.style.width = '100%'; // Reset CSS width
+            
+            // Reset Zoom
             currentZoom = 100;
+            resultCanvas.style.width = '100%';
             document.getElementById('zoom-value').textContent = '100%';
 
             const cleanCanvas = document.createElement('canvas');
@@ -620,17 +622,34 @@
             const imageData = uCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
             const data = imageData.data;
 
+            let blackPixels = 0;
+            let totalPixels = resultCanvas.width * resultCanvas.height;
+
             for (let i = 0; i < data.length; i += 4) {
                 const luminance = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
                 const color = luminance >= threshold ? 255 : 0;
+                if (color === 0) blackPixels++;
                 data[i] = data[i+1] = data[i+2] = color;
             }
             rCtx.putImageData(imageData, 0, 0);
+
+            // Alerte Qualité Dynamique Étape 3
+            const inkPercentage = (blackPixels / totalPixels) * 100;
+            const alertBanner = document.getElementById('result-alert-banner');
+            
+            if (inkPercentage < 2) {
+                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop claire. Le texte risque de s'effacer.";
+                alertBanner.style.display = 'block';
+            } else if (inkPercentage > 15) {
+                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop sombre. Déplacez le curseur vers la droite.";
+                alertBanner.style.display = 'block';
+            } else {
+                alertBanner.style.display = 'none';
+            }
         }
 
         function adjustZoom(delta) {
             currentZoom = Math.max(50, Math.min(300, currentZoom + delta));
-            // On modifie la largeur CSS pour que le container adapte ses scrollbars
             resultCanvas.style.width = currentZoom + '%';
             document.getElementById('zoom-value').textContent = currentZoom + '%';
         }
@@ -638,7 +657,6 @@
         // --- ÉTAPE 4 : GESTION MULTI-PAGES ---
         function validateCurrentPage() {
             if (!resultCanvas.width) return;
-            // Ajoute la page travaillée à la file
             pdfPageQueue.push({
                 dataUrl: resultCanvas.toDataURL('image/jpeg', 0.95),
                 width: resultCanvas.width, height: resultCanvas.height
@@ -646,14 +664,30 @@
             goToStep(4);
         }
 
-        function addAnotherPage() {
-            // Nettoie l'espace de travail pour la photo suivante, garde la file intacte
-            rawImage = new Image();
-            inputCamera.value = ''; inputGallery.value = '';
+        function addPageAndScanAnother() {
+            if (!resultCanvas.width) return;
+            pdfPageQueue.push({
+                dataUrl: resultCanvas.toDataURL('image/jpeg', 0.95),
+                width: resultCanvas.width,
+                height: resultCanvas.height
+            });
+            clearWorkspace();
             goToStep(1);
         }
 
-        // Actions de réorganisation des pages
+        function addAnotherPage() {
+            clearWorkspace();
+            goToStep(1);
+        }
+
+        function clearWorkspace() {
+            rawImage = new Image();
+            inputCamera.value = ''; inputGallery.value = '';
+            document.getElementById('source-alert-banner').style.display = 'none';
+            document.getElementById('result-alert-banner').style.display = 'none';
+        }
+
+        // Réorganisation
         function movePageUp(index) {
             if (index > 0) {
                 const temp = pdfPageQueue[index - 1];
@@ -671,10 +705,10 @@
             }
         }
         function deletePage(index) {
-            if (confirm("Voulez-vous vraiment supprimer cette page ?")) {
+            if (confirm("Supprimer cette page ?")) {
                 pdfPageQueue.splice(index, 1);
                 if (pdfPageQueue.length === 0) {
-                    goToStep(1); // Plus de page, retour au début obligatoire
+                    goToStep(1);
                 } else {
                     renderPagesList();
                 }
@@ -690,7 +724,7 @@
                 item.className = 'page-card';
                 item.innerHTML = `
                     <img class="page-card-thumb" src="${page.dataUrl}">
-                    <div class="page-card-title">Page n°${idx + 1}</div>
+                    <div class="page-card-title">Page ${idx + 1}</div>
                     <div class="page-card-actions">
                         <button type="button" class="btn-move" onclick="movePageUp(${idx})" ${idx === 0 ? 'disabled style="opacity:0.3;"' : ''}>⬆️</button>
                         <button type="button" class="btn-move" onclick="movePageDown(${idx})" ${idx === pdfPageQueue.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>⬇️</button>
@@ -703,7 +737,7 @@
 
         // --- ÉTAPE 5 : EXPORT ---
         async function exportPDF(mode = 'download') {
-            if (pdfPageQueue.length === 0) { alert("Aucun document à envoyer."); return; }
+            if (pdfPageQueue.length === 0) { alert("Aucun document prêt."); return; }
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -742,7 +776,7 @@
                         });
                         resetAppComplete();
                         return;
-                    } catch (err) { console.log("Partage annulé ou non supporté."); }
+                    } catch (err) { console.log("Partage annulé"); }
                 }
 
                 pdf.save(fileName);
@@ -761,11 +795,10 @@
             pdfPageQueue = [];
             document.getElementById('doc-type').value = "";
             document.getElementById('agent-name').value = "";
-            inputCamera.value = ''; inputGallery.value = ''; rawImage = new Image();
+            clearWorkspace();
             goToStep(1);
         }
 
-        // PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
