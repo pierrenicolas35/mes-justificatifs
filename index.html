@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Optimisation des justificatifs</title>
 
+    <!-- Meta PWA Mobile -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,22 +16,6 @@
 
     <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <!-- OpenCV (Moteur IA chargé en arrière-plan) -->
-    <script>
-        window.cvReady = false;
-        var Module = {
-            onRuntimeInitialized: function() {
-                window.cvReady = true;
-                const btn = document.getElementById('btn-auto-crop');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = "🪄 Cadrage Automatique (IA)";
-                }
-            }
-        };
-    </script>
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
 
     <style>
         :root {
@@ -46,35 +31,61 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         html, body {
-            width: 100%; height: 100%; margin: 0; padding: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg); color: var(--text-dark);
+            background-color: var(--bg);
+            color: var(--text-dark);
         }
 
+        /* --- SYSTÈME DE VUES (PAGES) --- */
         .app-view {
-            display: none; flex-direction: column; width: 100vw; min-height: 100vh;
-            padding: 15px; background: var(--bg); overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh; /* Fixé à la hauteur de l'écran */
+            padding: 12px;
+            background: var(--bg);
+            overflow-y: auto;
         }
         .app-view.active { display: flex; }
 
-        .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
+        /* --- EN-TÊTE COMMUN --- */
+        .header { text-align: center; margin-bottom: 10px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
         
         .stepper-bar {
-            background: var(--panel); padding: 12px 15px; border-radius: 12px;
-            border: 2px solid var(--border); margin-bottom: 15px; font-size: 0.95rem;
-            font-weight: 800; color: var(--text-dark); text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03); flex-shrink: 0;
+            background: var(--panel);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            flex-shrink: 0;
         }
 
         .panel {
-            background: var(--panel); padding: 15px; border-radius: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border);
-            display: flex; flex-direction: column; width: 100%; margin-bottom: 15px;
+            background: var(--panel);
+            padding: 15px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
-        .instruction { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 15px; }
+        .instruction { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 10px; flex-shrink: 0;}
 
+        /* --- BOUTONS --- */
         button {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
             background-color: var(--primary); color: white; border: none; padding: 14px;
@@ -82,14 +93,13 @@
             box-shadow: 0 3px 8px rgba(0,86,179,0.2); transition: transform 0.1s;
         }
         button:active { transform: scale(0.97); }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
-        button.magic { background-color: #6f42c1; box-shadow: 0 3px 8px rgba(111,66,193,0.2); width: 100%; margin-bottom: 10px; }
         
-        .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
+        .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; padding-bottom: 5px; }
 
-        .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: 15px 0; }
+        /* --- ÉTAPE 1 : IMPORTATION --- */
+        .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: auto 0; }
         .btn-import-option {
             background: #ffffff; border: 2px solid var(--border); border-radius: 16px;
             padding: 25px 15px; display: flex; align-items: center; justify-content: flex-start;
@@ -99,14 +109,17 @@
         .btn-import-option:active { transform: scale(0.97); background: #f0f6ff; border-color: var(--primary); }
         .btn-import-option img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 
+        /* --- ÉTAPE 2 : RECADRAGE --- */
         .fullscreen-crop-wrapper {
-            position: relative; width: 100%; height: 50vh; min-height: 350px;
+            position: relative; width: 100%; 
+            flex-grow: 1; /* Prend l'espace restant */
+            min-height: 200px; /* Évite de pousser les boutons hors de l'écran */
             background-color: #1a1a1a; border-radius: 12px; overflow: hidden;
-            display: flex; justify-content: center; align-items: center; margin-bottom: 15px;
+            display: flex; justify-content: center; align-items: center; margin-bottom: 10px;
         }
         #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
 
-        .toolbar-tools { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;}
+        .toolbar-tools { display: flex; justify-content: center; gap: 15px; margin-bottom: 5px; flex-shrink: 0; }
         button.icon-btn-tool {
             flex: 0 0 auto; width: 55px; height: 55px; padding: 0; background: #ffffff;
             border: 2px solid var(--border); border-radius: 12px; color: var(--primary);
@@ -115,22 +128,26 @@
         button.icon-btn-tool svg { width: 28px; height: 28px; stroke: var(--primary); }
 
         .alert-banner {
-            display: none; padding: 12px; border-radius: 10px; margin-bottom: 15px;
+            display: none; padding: 12px; border-radius: 10px; margin-bottom: 10px;
             font-size: 0.9rem; font-weight: 700; line-height: 1.4;
             background-color: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; text-align: center;
+            flex-shrink: 0;
         }
 
+        /* --- ÉTAPE 3 : APERÇU ET ZOOM --- */
         .preview-scroll-container {
-            width: 100%; height: 40vh; min-height: 300px; background: #e9ecef; overflow: auto; 
-            border-radius: 10px; border: 2px solid var(--border); margin-bottom: 15px;
+            width: 100%; flex-grow: 1; min-height: 250px;
+            background: #e9ecef; overflow: auto;
+            border-radius: 10px; border: 2px solid var(--border); margin-bottom: 10px;
         }
         #result-canvas {
-            display: block; margin: 0 auto; width: 100%; height: auto; background: white; 
-            transform-origin: top center; transition: width 0.15s ease-out;
+            display: block; margin: 0 auto;
+            width: 100%; height: auto; background: white; transform-origin: top center; transition: width 0.15s ease-out;
         }
-        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 15px; }
+        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 10px; flex-shrink: 0; }
 
-        .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        /* --- ÉTAPE 4 : REORGANISATION DES PAGES --- */
+        .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
         .page-card {
             display: flex; align-items: center; background: white; border: 2px solid var(--border);
             border-radius: 12px; padding: 8px 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
@@ -142,12 +159,13 @@
         .btn-move:active { background: #e2e6ea; }
         .btn-delete { background: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; border-radius: 8px; width: 40px; height: 40px; font-size: 1.1rem; box-shadow: none; }
 
+        /* --- ÉTAPE 5 : FINALISATION --- */
         .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
         .input-group label { font-size: 0.85rem; font-weight: 800; color: #2c3e50; }
         .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; }
         .input-group input:focus { border-color: var(--primary); }
 
-        .action-buttons-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 10px; }
+        .action-buttons-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 5px; }
         .btn-export {
             display: flex; align-items: center; justify-content: flex-start; gap: 15px;
             padding: 15px; border-radius: 12px; border: 2px solid var(--border);
@@ -162,10 +180,12 @@
     <!-- ================= VUE 1 : CHOIX SOURCE ================= -->
     <div id="step-1" class="app-view active">
         <div class="header"><h2>Optimisation des justificatifs</h2></div>
+        
         <div class="stepper-bar">Étape 1 sur 5 : Déposez votre document</div>
 
         <div class="panel" style="margin-top: auto; margin-bottom: auto;">
             <p class="instruction">Choisissez comment ajouter votre justificatif :</p>
+            
             <div class="import-grid">
                 <div class="btn-import-option" onclick="triggerInput('camera')">
                     <img src="https://cdn-icons-png.flaticon.com/512/2956/2956744.png" alt="Appareil Photo">
@@ -173,7 +193,7 @@
                 </div>
                 <div class="btn-import-option" onclick="triggerInput('gallery')">
                     <img src="https://cdn-icons-png.flaticon.com/512/1375/1375106.png" alt="Galerie">
-                    <span>Ouvrir la galerie</span>
+                    <span>Choisir dans la galerie</span>
                 </div>
             </div>
         </div>
@@ -191,13 +211,9 @@
             ⚠️ <strong>Attention :</strong> La photo semble floue ou trop sombre. Le texte risque d'être illisible.
         </div>
 
-        <p class="instruction" style="margin-bottom: 8px;">Ajustez le cadre bleu sur les bords de la feuille.</p>
+        <p class="instruction">Ajustez le cadre bleu sur les bords de la feuille.</p>
 
-        <!-- Bouton IA -->
-        <button type="button" id="btn-auto-crop" class="magic" onclick="autoDetectFrame()" disabled>
-            ⏳ Chargement de l'IA...
-        </button>
-
+        <!-- Le wrapper flexible qui prend la bonne hauteur sans pousser les boutons -->
         <div class="fullscreen-crop-wrapper">
             <canvas id="source-canvas"></canvas>
         </div>
@@ -227,23 +243,25 @@
 
         <div id="result-alert-banner" class="alert-banner"></div>
 
-        <div class="panel">
-            <p class="instruction">Faites glisser ce curseur pour que le fond soit bien blanc et le texte noir.</p>
-            <input type="range" id="threshold" min="50" max="220" value="130" oninput="applyBinarization()">
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <span style="font-weight: 800; font-size:0.9rem;">Aperçu du rendu :</span>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(-20)">-</button>
-                    <span id="zoom-value" style="font-size:0.9rem; font-weight:800; width:45px; text-align:center;">100%</span>
-                    <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(20)">+</button>
-                </div>
-            </div>
-
-            <div class="preview-scroll-container">
-                <canvas id="result-canvas"></canvas>
+        <p class="instruction">Faites glisser ce curseur pour que le fond soit bien blanc et le texte noir.</p>
+        <input type="range" id="threshold" min="50" max="220" value="130" oninput="applyBinarization()">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
+            <span style="font-weight: 800; font-size:0.9rem;">Aperçu :</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(-20)">-</button>
+                <span id="zoom-value" style="font-size:0.9rem; font-weight:800; width:45px; text-align:center;">100%</span>
+                <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(20)">+</button>
             </div>
         </div>
+
+        <div class="preview-scroll-container">
+            <canvas id="result-canvas"></canvas>
+        </div>
+
+        <button type="button" class="secondary" style="flex:0; margin-bottom: 10px;" onclick="addPageAndScanAnother()">
+            ➕ Ajouter une autre page (Optionnel)
+        </button>
 
         <div class="nav-buttons">
             <button type="button" class="secondary" onclick="goToStep(2)">← Retour</button>
@@ -257,12 +275,14 @@
         <div class="stepper-bar">Étape 4 sur 5 : Vos pages numérisées</div>
 
         <div class="panel">
-            <p class="instruction">Vérifiez vos pages. Vous pouvez changer leur ordre ou en ajouter d'autres.</p>
+            <p class="instruction">Vérifiez vos pages. Vous pouvez les réorganiser ou en ajouter.</p>
             
-            <div class="pages-list-container" id="pages-list"></div>
+            <div class="pages-list-container" id="pages-list">
+                <!-- Les cartes de pages s'affichent ici -->
+            </div>
 
             <button type="button" style="background:#eef4fc; color:var(--primary); border:2px dashed var(--primary); box-shadow:none;" onclick="addAnotherPage()">
-                ➕ Ajouter une autre page au document
+                ➕ Ajouter une page supplémentaire
             </button>
         </div>
 
@@ -276,8 +296,8 @@
         <div class="header"><h2>Optimisation des justificatifs</h2></div>
         <div class="stepper-bar">Étape 5 sur 5 : Finalisation</div>
 
-        <div class="panel">
-            <p class="instruction">Indiquez les informations du document avant l'envoi.</p>
+        <div class="panel" style="margin-top:auto; margin-bottom:auto;">
+            <p class="instruction">Indiquez les informations avant de l'envoyer.</p>
             
             <div class="input-group">
                 <label for="doc-type">Nature du document</label>
@@ -309,8 +329,10 @@
         // --- ETAT GLOBAL ---
         let rawImage = new Image();
         let corners = [];
-        let activePoint = -1; let activeEdge = -1;
-        let dragStartPos = null; let dragStartCorners = null;
+        let activePoint = -1;
+        let activeEdge = -1;
+        let dragStartPos = null;
+        let dragStartCorners = null;
         let currentZoom = 100;
 
         let unbinarizedCanvas = document.createElement('canvas');
@@ -328,7 +350,6 @@
         function goToStep(stepIndex) {
             document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active'));
             document.getElementById(`step-${stepIndex}`).classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
 
             if (stepIndex === 2 && rawImage.src) {
                 setTimeout(() => { setupSourceCanvas(); }, 50);
@@ -361,7 +382,6 @@
             reader.readAsDataURL(file);
         }
 
-        // --- CONTRÔLE QUALITÉ SOURCE ---
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
             const maxDim = 500;
@@ -414,89 +434,7 @@
             }
         }
 
-        // --- IA AUTO-CADRAGE ---
-        function autoDetectFrame() {
-            if (!window.cvReady) { alert("L'intelligence artificielle n'est pas encore prête."); return; }
-
-            let src, resized, gray, edges, M, contours, hierarchy, bestContour;
-            try {
-                // Créer un canvas temporaire réduit pour éviter de crasher la RAM du téléphone
-                const maxDim = 800;
-                let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
-                if (scale < 1) scale = 1;
-                
-                let rw = Math.round(rawImage.width / scale);
-                let rh = Math.round(rawImage.height / scale);
-                
-                let tmpCanvas = document.createElement('canvas');
-                tmpCanvas.width = rw; tmpCanvas.height = rh;
-                let tmpCtx = tmpCanvas.getContext('2d');
-                tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
-                
-                src = cv.imread(tmpCanvas);
-                gray = new cv.Mat();
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-                
-                edges = new cv.Mat();
-                cv.Canny(gray, edges, 50, 150);
-                
-                // Dilater pour fermer les bords interrompus
-                M = cv.Mat.ones(5, 5, cv.CV_8U);
-                cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
-                
-                contours = new cv.MatVector();
-                hierarchy = new cv.Mat();
-                cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-                
-                let maxArea = 0;
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-                    
-                    if (area > (rw * rh * 0.15)) {
-                        let perimeter = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
-                        
-                        if (approx.rows === 4 && area > maxArea) {
-                            maxArea = area;
-                            if (bestContour) bestContour.delete();
-                            bestContour = approx.clone();
-                        }
-                        approx.delete();
-                    }
-                }
-                
-                if (bestContour) {
-                    let pts = [];
-                    for (let i = 0; i < 4; i++) {
-                        pts.push({
-                            x: bestContour.data32S[i * 2] * scale,
-                            y: bestContour.data32S[i * 2 + 1] * scale
-                        });
-                    }
-                    
-                    // Tri mathématique des 4 points pour éviter un croisement en sablier
-                    pts.sort((a,b) => a.y - b.y);
-                    let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
-                    let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
-                    corners = [top[0], top[1], bottom[0], bottom[1]];
-
-                    drawSource();
-                } else {
-                    alert("Document non détecté automatiquement. Ajustez le cadre manuellement.");
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete(); if (M) M.delete();
-                if (contours) contours.delete(); if (hierarchy) hierarchy.delete();
-                if (bestContour) bestContour.delete();
-            }
-        }
-
-        // --- ÉTAPE 2 : RECADRAGE MANUEL ---
+        // --- ÉTAPE 2 : RECADRAGE ---
         function setupSourceCanvas() {
             sourceCanvas.width = rawImage.width;
             sourceCanvas.height = rawImage.height;
@@ -532,7 +470,6 @@
             sCtx.lineWidth = Math.max(3, sourceCanvas.width / 250);
             sCtx.stroke();
 
-            // Bordures
             const edgeRadius = Math.max(12, sourceCanvas.width / 90);
             for (let i = 0; i < 4; i++) {
                 const nextIdx = (i + 1) % 4;
@@ -543,7 +480,6 @@
                 sCtx.strokeStyle = '#ffffff'; sCtx.lineWidth = edgeRadius / 3; sCtx.stroke();
             }
 
-            // Coins
             const radius = Math.max(16, sourceCanvas.width / 50);
             corners.forEach((pt) => {
                 sCtx.beginPath(); sCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
@@ -630,7 +566,7 @@
             rawImage.src = tempCanvas.toDataURL();
         }
 
-        // --- ÉTAPE 3 : APERÇU & BINARISATION ---
+        // --- ÉTAPE 3 : APERÇU ET REGLAGES ---
         function triggerWarp() {
             if (!rawImage.src || sourceCanvas.width === 0) return;
 
@@ -645,6 +581,7 @@
             unbinarizedCanvas.width = targetW; unbinarizedCanvas.height = targetH;
             resultCanvas.width = targetW; resultCanvas.height = targetH;
             
+            // Reset Zoom
             currentZoom = 100;
             resultCanvas.style.width = '100%';
             document.getElementById('zoom-value').textContent = '100%';
@@ -696,15 +633,15 @@
             }
             rCtx.putImageData(imageData, 0, 0);
 
-            // Alerte de Contraste dynamique
+            // Alerte Qualité Dynamique Étape 3
             const inkPercentage = (blackPixels / totalPixels) * 100;
             const alertBanner = document.getElementById('result-alert-banner');
             
             if (inkPercentage < 2) {
-                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop claire. Le texte risque d'être effacé.";
+                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop claire. Le texte risque de s'effacer.";
                 alertBanner.style.display = 'block';
             } else if (inkPercentage > 15) {
-                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop sombre. Glissez le curseur vers la droite.";
+                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop sombre. Déplacez le curseur vers la droite.";
                 alertBanner.style.display = 'block';
             } else {
                 alertBanner.style.display = 'none';
@@ -727,21 +664,30 @@
             goToStep(4);
         }
 
-        function addAnotherPage() {
-            rawImage = new Image();
-            inputCamera.value = ''; inputGallery.value = '';
-            goToStep(1);
-        }
-
         function addPageAndScanAnother() {
             if (!resultCanvas.width) return;
             pdfPageQueue.push({
                 dataUrl: resultCanvas.toDataURL('image/jpeg', 0.95),
-                width: resultCanvas.width, height: resultCanvas.height
+                width: resultCanvas.width,
+                height: resultCanvas.height
             });
-            addAnotherPage();
+            clearWorkspace();
+            goToStep(1);
         }
 
+        function addAnotherPage() {
+            clearWorkspace();
+            goToStep(1);
+        }
+
+        function clearWorkspace() {
+            rawImage = new Image();
+            inputCamera.value = ''; inputGallery.value = '';
+            document.getElementById('source-alert-banner').style.display = 'none';
+            document.getElementById('result-alert-banner').style.display = 'none';
+        }
+
+        // Réorganisation
         function movePageUp(index) {
             if (index > 0) {
                 const temp = pdfPageQueue[index - 1];
@@ -761,7 +707,11 @@
         function deletePage(index) {
             if (confirm("Supprimer cette page ?")) {
                 pdfPageQueue.splice(index, 1);
-                if (pdfPageQueue.length === 0) { goToStep(1); } else { renderPagesList(); }
+                if (pdfPageQueue.length === 0) {
+                    goToStep(1);
+                } else {
+                    renderPagesList();
+                }
             }
         }
 
@@ -774,7 +724,7 @@
                 item.className = 'page-card';
                 item.innerHTML = `
                     <img class="page-card-thumb" src="${page.dataUrl}">
-                    <div class="page-card-title">Page n°${idx + 1}</div>
+                    <div class="page-card-title">Page ${idx + 1}</div>
                     <div class="page-card-actions">
                         <button type="button" class="btn-move" onclick="movePageUp(${idx})" ${idx === 0 ? 'disabled style="opacity:0.3;"' : ''}>⬆️</button>
                         <button type="button" class="btn-move" onclick="movePageDown(${idx})" ${idx === pdfPageQueue.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>⬇️</button>
@@ -787,7 +737,7 @@
 
         // --- ÉTAPE 5 : EXPORT ---
         async function exportPDF(mode = 'download') {
-            if (pdfPageQueue.length === 0) { alert("Aucun document à envoyer."); return; }
+            if (pdfPageQueue.length === 0) { alert("Aucun document prêt."); return; }
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -845,11 +795,10 @@
             pdfPageQueue = [];
             document.getElementById('doc-type').value = "";
             document.getElementById('agent-name').value = "";
-            rawImage = new Image();
+            clearWorkspace();
             goToStep(1);
         }
 
-        // PWA Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
