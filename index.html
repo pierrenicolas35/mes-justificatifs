@@ -35,6 +35,7 @@
 
     <style>
         :root {
+            /* Bleu CHU Grenoble Alpes */
             --primary: #009ce0; 
             --primary-hover: #007eb5;
             --success: #28a745;
@@ -53,14 +54,14 @@
             overflow-y: auto;
         }
 
-        /* --- VUES --- */
+        /* --- SYSTÈME DE VUES --- */
         .app-view {
             display: none; flex-direction: column; width: 100vw; min-height: 100vh;
             padding: 15px; background: var(--bg); overflow-y: auto;
         }
         .app-view.active { display: flex; }
 
-        /* --- ACCUEIL --- */
+        /* --- ÉCRAN D'ACCUEIL (BIENVENUE) --- */
         .welcome-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: white; border-radius: 16px; padding: 35px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
@@ -76,7 +77,7 @@
             background: #eef4fc; color: var(--primary); border-radius: 50%; font-weight: 800; font-size: 0.85rem; 
         }
 
-        /* --- EN-TÊTES --- */
+        /* --- EN-TÊTE COMMUN --- */
         .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
         
@@ -107,6 +108,7 @@
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
         
+        /* Bouton IA compact */
         button.magic { 
             background-color: #ffffff; 
             color: var(--primary); 
@@ -124,7 +126,7 @@
         
         .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
 
-        /* --- IMPORT --- */
+        /* --- ÉTAPE 1 : IMPORTATION --- */
         .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: 15px 0; }
         .btn-import-option {
             background: #ffffff; border: 2px solid var(--border); border-radius: 16px;
@@ -135,7 +137,7 @@
         .btn-import-option:active { transform: scale(0.97); background: #f0f6ff; border-color: var(--primary); }
         .btn-import-option img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 
-        /* --- RECADRAGE --- */
+        /* --- ÉTAPE 2 : RECADRAGE --- */
         .fullscreen-crop-wrapper {
             position: relative; width: 100%; height: 50vh; min-height: 350px;
             background-color: #1a1a1a; border-radius: 12px; overflow: hidden;
@@ -182,18 +184,30 @@
         }
         .toast-notification.show { bottom: 30px; }
 
-        /* --- APERÇU ET ZOOM --- */
+        /* --- ÉTAPE 3 : MODE AUTO / MANUEL & ZOOM --- */
+        .mode-toggle-group {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+        }
+        .mode-btn {
+            background: #ffffff; color: var(--text-dark); border: 2px solid var(--border);
+            border-radius: 10px; padding: 10px 8px; font-weight: 800; font-size: 0.85rem;
+            cursor: pointer; text-align: center; box-shadow: none;
+        }
+        .mode-btn.active {
+            background: #eef4fc; color: var(--primary); border-color: var(--primary);
+        }
+
         .preview-scroll-container {
-            width: 100%; height: 40vh; min-height: 300px; background: #e9ecef; overflow: auto; 
+            width: 100%; height: 38vh; min-height: 270px; background: #e9ecef; overflow: auto; 
             border-radius: 10px; border: 2px solid var(--border); margin-bottom: 15px;
         }
         #result-canvas {
             display: block; margin: 0 auto; width: 100%; height: auto; background: white; 
             transform-origin: top center; transition: width 0.15s ease-out;
         }
-        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 15px; }
+        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 12px; }
 
-        /* --- REORGANISATION --- */
+        /* --- ÉTAPE 4 : REORGANISATION --- */
         .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .page-card {
             display: flex; align-items: center; background: white; border: 2px solid var(--border);
@@ -206,7 +220,7 @@
         .btn-move:active { background: #e2e6ea; }
         .btn-delete { background: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; border-radius: 8px; width: 40px; height: 40px; font-size: 1.1rem; box-shadow: none; }
 
-        /* --- FINALISATION --- */
+        /* --- ÉTAPE 5 : FINALISATION --- */
         .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
         .input-group label { font-size: 0.85rem; font-weight: 800; color: #2c3e50; }
         .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; transition: border-color 0.2s;}
@@ -319,23 +333,34 @@
         </div>
     </div>
 
-    <!-- ================= VUE 3 : CONTRASTE & ZOOM ================= -->
+    <!-- ================= VUE 3 : CONTRASTE & NETTOYAGE AUTO (IA) ================= -->
     <div id="step-3" class="app-view">
         <div class="header"><h2>Mes justificatifs</h2></div>
-        <div class="stepper-bar">Étape 3 sur 5 : Effacez les ombres</div>
+        <div class="stepper-bar">Étape 3 sur 5 : Clarté & Nettoyage</div>
 
         <div id="result-alert-banner" class="alert-banner"></div>
 
         <div class="panel">
-            <p class="instruction">Faites glisser ce curseur pour que le fond soit bien blanc et le texte noir.</p>
-            <input type="range" id="threshold" min="50" max="220" value="130" oninput="applyBinarization()">
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
-                <span style="font-weight: 800; font-size:0.9rem;">Aperçu du rendu :</span>
+            <div class="mode-toggle-group">
+                <button type="button" id="btn-mode-auto" class="mode-btn active" onclick="setEnhanceMode('auto')">
+                    🪄 Nettoyage IA (Auto)
+                </button>
+                <button type="button" id="btn-mode-manual" class="mode-btn" onclick="setEnhanceMode('manual')">
+                    ⚙️ Réglage Manuel
+                </button>
+            </div>
+
+            <div id="manual-controls" style="display: none;">
+                <p class="instruction" style="margin-bottom: 6px;">Faites glisser ce curseur pour ajuster le contraste :</p>
+                <input type="range" id="threshold" min="50" max="220" value="130" oninput="applyBinarizationManual()">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+                <span style="font-weight: 800; font-size:0.88rem;">Aperçu du document :</span>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(-20)">-</button>
-                    <span id="zoom-value" style="font-size:0.9rem; font-weight:800; width:45px; text-align:center;">100%</span>
-                    <button type="button" class="secondary icon-btn-tool" style="width:36px; height:36px;" onclick="adjustZoom(20)">+</button>
+                    <button type="button" class="secondary icon-btn-tool" style="width:34px; height:34px;" onclick="adjustZoom(-20)">-</button>
+                    <span id="zoom-value" style="font-size:0.85rem; font-weight:800; width:45px; text-align:center;">100%</span>
+                    <button type="button" class="secondary icon-btn-tool" style="width:34px; height:34px;" onclick="adjustZoom(20)">+</button>
                 </div>
             </div>
 
@@ -412,6 +437,7 @@
         let dragStartPos = null; let dragStartCorners = null;
         let currentZoom = 100;
         let isDrawing = false;
+        let currentEnhanceMode = 'auto'; // 'auto' (IA) ou 'manual'
 
         let unbinarizedCanvas = document.createElement('canvas');
         let pdfPageQueue = [];
@@ -456,7 +482,7 @@
             setTimeout(() => { toast.classList.remove('show'); }, 3500);
         }
 
-        // --- ÉTAPE 1 : IMPORTATION & COMPRESSION ULTRA-RAPIDE ---
+        // --- ÉTAPE 1 : IMPORTATION & COMPRESSION ---
         function triggerInput(type) {
             if (type === 'camera') { inputCamera.value = ''; inputCamera.click(); }
             else { inputGallery.value = ''; inputGallery.click(); }
@@ -471,7 +497,6 @@
             reader.onload = (e) => {
                 const tempImg = new Image();
                 tempImg.onload = () => {
-                    // Compression et limitation à 1600px max (Fluidité totale à 60 FPS)
                     const maxDim = 1600;
                     let w = tempImg.width;
                     let h = tempImg.height;
@@ -834,7 +859,7 @@
             rawImage.src = tempCanvas.toDataURL();
         }
 
-        // --- ÉTAPE 3 : APERÇU & BINARISATION ---
+        // --- ÉTAPE 3 : APERÇU, RECTIFICATION & NETTOYAGE IA ---
         function triggerWarp() {
             if (!rawImage.src || sourceCanvas.width === 0) return;
 
@@ -876,13 +901,78 @@
                 }
             }
             uCtx.putImageData(outImgData, 0, 0);
-            applyBinarization();
+            
+            // Mode automatique par défaut
+            setEnhanceMode('auto');
             goToStep(3);
         }
 
-        function applyBinarization() {
+        // Bascule entre mode Auto (IA) et Manuel
+        function setEnhanceMode(mode) {
+            currentEnhanceMode = mode;
+            const btnAuto = document.getElementById('btn-mode-auto');
+            const btnManual = document.getElementById('btn-mode-manual');
+            const manualControls = document.getElementById('manual-controls');
+
+            if (mode === 'auto') {
+                btnAuto.classList.add('active');
+                btnManual.classList.remove('active');
+                manualControls.style.display = 'none';
+                applyAutoEnhanceIA();
+            } else {
+                btnManual.classList.add('active');
+                btnAuto.classList.remove('active');
+                manualControls.style.display = 'block';
+                applyBinarizationManual();
+            }
+        }
+
+        // Nettoyage et contraste IA Automatique (Adaptive Thresholding)
+        function applyAutoEnhanceIA() {
             if (!unbinarizedCanvas.width) return;
-            const threshold = parseInt(document.getElementById('threshold').value);
+
+            // Si OpenCV est disponible, utilisation du seuil adaptatif local
+            if (window.cvReady) {
+                let src, gray, binary;
+                try {
+                    src = cv.imread(unbinarizedCanvas);
+                    gray = new cv.Mat();
+                    binary = new cv.Mat();
+
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                    cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
+
+                    // Adaptive Thresholding : calcule le seuil zone par zone pour effacer les ombres
+                    cv.adaptiveThreshold(
+                        gray, 
+                        binary, 
+                        255, 
+                        cv.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                        cv.THRESH_BINARY, 
+                        25, 
+                        10  
+                    );
+
+                    cv.imshow('result-canvas', binary);
+                    document.getElementById('result-alert-banner').style.display = 'none';
+                    return;
+                } catch (e) {
+                    console.error("Erreur filtre IA, repli sur le mode standard :", e);
+                } finally {
+                    if (src) src.delete();
+                    if (gray) gray.delete();
+                    if (binary) binary.delete();
+                }
+            }
+
+            // Repli automatique si OpenCV n'est pas encore prêt
+            applyBinarizationManual(130);
+        }
+
+        // Réglage manuel par curseur
+        function applyBinarizationManual(forcedThreshold = null) {
+            if (!unbinarizedCanvas.width) return;
+            const threshold = forcedThreshold !== null ? forcedThreshold : parseInt(document.getElementById('threshold').value);
             const uCtx = unbinarizedCanvas.getContext('2d');
             const imageData = uCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
             const data = imageData.data;
@@ -898,7 +988,7 @@
             }
             rCtx.putImageData(imageData, 0, 0);
 
-            // Alerte Qualité
+            // Alerte Qualité Manuel
             const inkPercentage = (blackPixels / totalPixels) * 100;
             const alertBanner = document.getElementById('result-alert-banner');
             
@@ -1031,7 +1121,11 @@
                     try {
                         await navigator.share({
                             title: `${docTypeVal} ${agentNameVal}`,
-                            text: `Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`,
+                            text: `Bonjour,
+
+Je vous transmets le document : ${docTypeVal}.
+
+Cordialement,`,
                             files: [file]
                         });
                         showToast();
@@ -1044,7 +1138,11 @@
                 showToast();
                 
                 const subject = encodeURIComponent(`${docTypeVal} ${agentNameVal}`);
-                const body = encodeURIComponent(`Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`);
+                const body = encodeURIComponent(`Bonjour,
+
+Je vous transmets le document : ${docTypeVal}.
+
+Cordialement,`);
                 setTimeout(() => { window.location.href = `mailto:?subject=${subject}&body=${body}`; }, 500);
 
             } else {
@@ -1067,7 +1165,7 @@
         // Initialisation
         goToStep(0);
 
-        // PWA
+        // PWA Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
