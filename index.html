@@ -108,7 +108,6 @@
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
         
-        /* Bouton IA compact */
         button.magic { 
             background-color: #ffffff; 
             color: var(--primary); 
@@ -437,7 +436,7 @@
         let dragStartPos = null; let dragStartCorners = null;
         let currentZoom = 100;
         let isDrawing = false;
-        let currentEnhanceMode = 'auto'; 
+        let currentEnhanceMode = 'auto';
 
         let unbinarizedCanvas = document.createElement('canvas');
         let pdfPageQueue = [];
@@ -482,7 +481,7 @@
             setTimeout(() => { toast.classList.remove('show'); }, 3500);
         }
 
-        // --- ÉTAPE 1 : IMPORTATION & COMPRESSION ---
+        // --- ÉTAPE 1 : IMPORTATION ---
         function triggerInput(type) {
             if (type === 'camera') { inputCamera.value = ''; inputCamera.click(); }
             else { inputGallery.value = ''; inputGallery.click(); }
@@ -497,7 +496,7 @@
             reader.onload = (e) => {
                 const tempImg = new Image();
                 tempImg.onload = () => {
-                    const maxDim = 1600;
+                    const maxDim = 1600; // Optimization
                     let w = tempImg.width;
                     let h = tempImg.height;
                     
@@ -532,7 +531,7 @@
         // --- CONTRÔLE QUALITÉ SOURCE ---
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
-            const maxDim = 400;
+            const maxDim = 500;
             let w = rawImage.width; let h = rawImage.height;
             if (w > maxDim || h > maxDim) {
                 if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
@@ -575,22 +574,18 @@
             const blurScore = varianceSum / count;
 
             const banner = document.getElementById('source-alert-banner');
-            if (blurScore < 90 || avgBrightness < 40) {
+            if (blurScore < 100 || avgBrightness < 45) {
                 banner.style.display = 'block';
             } else {
                 banner.style.display = 'none';
             }
         }
 
-        // --- IA AUTO-CADRAGE (Correction 100% Safe) ---
+        // --- IA AUTO-CADRAGE (Original qui fonctionne) ---
         function autoDetectFrame() {
-            if (!window.cvReady) { 
-                alert("L'intelligence artificielle n'est pas encore chargée."); 
-                return; 
-            }
+            if (!window.cvReady) return;
 
-            let src, gray, blur, edges, M, contours, hierarchy, hull, approx;
-            
+            let src, gray, edges, M, contours, hierarchy, bestContour;
             try {
                 const maxDim = 800;
                 let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
@@ -600,99 +595,63 @@
                 let rh = Math.round(rawImage.height / scale);
                 
                 let tmpCanvas = document.createElement('canvas');
-                tmpCanvas.width = rw; 
-                tmpCanvas.height = rh;
+                tmpCanvas.width = rw; tmpCanvas.height = rh;
                 let tmpCtx = tmpCanvas.getContext('2d');
                 tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
                 
                 src = cv.imread(tmpCanvas);
                 gray = new cv.Mat();
-                blur = new cv.Mat();
-                edges = new cv.Mat();
-                
-                // 1. Filtrage et Binarisation allégés et compatibles Web
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-                cv.Canny(blur, edges, 50, 150);
+                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
                 
-                // 2. Dilatation basique et universelle
+                edges = new cv.Mat();
+                cv.Canny(gray, edges, 50, 150);
+                
                 M = cv.Mat.ones(5, 5, cv.CV_8U);
-                cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1);
+                cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
                 
                 contours = new cv.MatVector();
                 hierarchy = new cv.Mat();
-                cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
                 
-                // 3. Identification de la feuille
                 let maxArea = 0;
-                let bestContourIdx = -1;
-                
                 for (let i = 0; i < contours.size(); ++i) {
-                    let area = cv.contourArea(contours.get(i));
-                    if (area > (rw * rh * 0.05) && area < (rw * rh * 0.98)) {
-                        if (area > maxArea) {
+                    let cnt = contours.get(i);
+                    let area = cv.contourArea(cnt);
+                    
+                    if (area > (rw * rh * 0.15)) {
+                        let perimeter = cv.arcLength(cnt, true);
+                        let approx = new cv.Mat();
+                        cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
+                        
+                        if (approx.rows === 4 && area > maxArea) {
                             maxArea = area;
-                            bestContourIdx = i;
+                            if (bestContour) bestContour.delete();
+                            bestContour = approx.clone();
                         }
+                        approx.delete();
                     }
                 }
                 
-                if (bestContourIdx !== -1) {
-                    let cnt = contours.get(bestContourIdx);
-                    hull = new cv.Mat();
-                    cv.convexHull(cnt, hull, false, true); 
-                    
-                    let perimeter = cv.arcLength(hull, true);
-                    approx = new cv.Mat();
-                    let found4Points = false;
-                    let finalPts = [];
-                    
-                    for (let epsilon = 0.02; epsilon <= 0.1; epsilon += 0.01) {
-                        cv.approxPolyDP(hull, approx, epsilon * perimeter, true);
-                        if (approx.rows === 4) {
-                            found4Points = true;
-                            for (let i = 0; i < 4; i++) {
-                                finalPts.push({ 
-                                    x: approx.data32S[i * 2] * scale, 
-                                    y: approx.data32S[i * 2 + 1] * scale 
-                                });
-                            }
-                            break;
-                        }
+                if (bestContour) {
+                    let pts = [];
+                    for (let i = 0; i < 4; i++) {
+                        pts.push({ x: bestContour.data32S[i * 2] * scale, y: bestContour.data32S[i * 2 + 1] * scale });
                     }
-                    
-                    if (!found4Points) {
-                        let rect = cv.boundingRect(hull);
-                        finalPts = [
-                            { x: rect.x * scale, y: rect.y * scale },
-                            { x: (rect.x + rect.width) * scale, y: rect.y * scale },
-                            { x: (rect.x + rect.width) * scale, y: (rect.y + rect.height) * scale },
-                            { x: rect.x * scale, y: (rect.y + rect.height) * scale }
-                        ];
-                    }
-                    
-                    finalPts.sort((a,b) => a.y - b.y);
-                    let top = [finalPts[0], finalPts[1]].sort((a,b) => a.x - b.x);
-                    let bottom = [finalPts[2], finalPts[3]].sort((a,b) => b.x - a.x);
+                    pts.sort((a,b) => a.y - b.y);
+                    let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
+                    let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
                     corners = [top[0], top[1], bottom[0], bottom[1]];
-                    
                     requestAnimationFrame(drawSource);
                 } else {
                     openModal();
                 }
             } catch (e) {
-                console.error("Erreur OpenCV: ", e);
-                openModal();
+                console.error(e);
             } finally {
-                if (src) src.delete(); 
-                if (gray) gray.delete(); 
-                if (blur) blur.delete();
-                if (edges) edges.delete(); 
-                if (M) M.delete();
-                if (contours) contours.delete(); 
-                if (hierarchy) hierarchy.delete();
-                if (hull) hull.delete();
-                if (approx) approx.delete();
+                if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete(); if (M) M.delete();
+                if (contours) contours.delete(); if (hierarchy) hierarchy.delete();
+                if (bestContour) bestContour.delete();
             }
         }
 
@@ -946,6 +905,7 @@
             goToStep(3);
         }
 
+        // --- BASCULE IA / MANUEL ---
         function setEnhanceMode(mode) {
             currentEnhanceMode = mode;
             const btnAuto = document.getElementById('btn-mode-auto');
@@ -965,6 +925,7 @@
             }
         }
 
+        // --- FILTRE IA (Seuil Adaptatif Local) ---
         function applyAutoEnhanceIA() {
             if (!unbinarizedCanvas.width) return;
 
@@ -978,6 +939,7 @@
                     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
                     cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
 
+                    // Seuil adaptatif : efface les ombres locales
                     cv.adaptiveThreshold(
                         gray, 
                         binary, 
@@ -999,7 +961,7 @@
                     if (binary) binary.delete();
                 }
             }
-
+            
             applyBinarizationManual(130);
         }
 
@@ -1153,11 +1115,7 @@
                     try {
                         await navigator.share({
                             title: `${docTypeVal} ${agentNameVal}`,
-                            text: `Bonjour,
-
-Je vous transmets le document : ${docTypeVal}.
-
-Cordialement,`,
+                            text: `Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`,
                             files: [file]
                         });
                         showToast();
@@ -1170,11 +1128,7 @@ Cordialement,`,
                 showToast();
                 
                 const subject = encodeURIComponent(`${docTypeVal} ${agentNameVal}`);
-                const body = encodeURIComponent(`Bonjour,
-
-Je vous transmets le document : ${docTypeVal}.
-
-Cordialement,`);
+                const body = encodeURIComponent(`Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`);
                 setTimeout(() => { window.location.href = `mailto:?subject=${subject}&body=${body}`; }, 500);
 
             } else {
