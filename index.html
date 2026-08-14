@@ -17,7 +17,7 @@
     <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- OpenCV (Moteur IA) avec détection d'erreur -->
+    <!-- OpenCV (Moteur IA) -->
     <script>
         window.cvReady = false;
         var Module = {
@@ -30,19 +30,11 @@
                 }
             }
         };
-        
-        function onOpenCvError() {
-            const btn = document.getElementById('btn-auto-crop');
-            if (btn) {
-                btn.innerHTML = "⚠️ Erreur réseau (IA bloquée)";
-            }
-        }
     </script>
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onerror="onOpenCvError()"></script>
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
 
     <style>
         :root {
-            /* Bleu CHU Grenoble Alpes */
             --primary: #009ce0; 
             --primary-hover: #007eb5;
             --success: #28a745;
@@ -68,7 +60,7 @@
         }
         .app-view.active { display: flex; }
 
-        /* --- ÉCRAN D'ACCUEIL (BIENVENUE) --- */
+        /* --- ÉCRAN D'ACCUEIL --- */
         .welcome-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: white; border-radius: 16px; padding: 35px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
@@ -111,10 +103,10 @@
             box-shadow: 0 3px 8px rgba(0,156,224,0.3); transition: transform 0.1s;
         }
         button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
         
-        /* Bouton IA compact */
         button.magic { 
             background-color: #ffffff; 
             color: var(--primary); 
@@ -130,7 +122,6 @@
             box-shadow: 0 3px 6px rgba(0,156,224,0.15);
         }
 
-        /* FEEDBACK VISUEL : Bouton IA grisé quand inactif */
         button.magic:disabled {
             background-color: #f1f3f5;
             color: #adb5bd;
@@ -142,7 +133,7 @@
         
         .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
 
-        /* --- ÉTAPE 1 : IMPORTATION --- */
+        /* --- IMPORTATION --- */
         .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: 15px 0; }
         .btn-import-option {
             background: #ffffff; border: 2px solid var(--border); border-radius: 16px;
@@ -153,7 +144,7 @@
         .btn-import-option:active { transform: scale(0.97); background: #f0f6ff; border-color: var(--primary); }
         .btn-import-option img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 
-        /* --- ÉTAPE 2 : RECADRAGE --- */
+        /* --- RECADRAGE --- */
         .fullscreen-crop-wrapper {
             position: relative; width: 100%; height: 50vh; min-height: 350px;
             background-color: #1a1a1a; border-radius: 12px; overflow: hidden;
@@ -180,17 +171,6 @@
             background-color: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; text-align: center;
         }
 
-        /* --- MODAL --- */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background: white; padding: 25px; border-radius: 16px; width: 85%; max-width: 400px;
-            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .modal-content p { font-size: 1rem; font-weight: 700; color: #2c3e50; margin-bottom: 20px; line-height: 1.4; }
-
         /* --- TOAST --- */
         .toast-notification {
             position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
@@ -200,18 +180,14 @@
         }
         .toast-notification.show { bottom: 30px; }
 
-        /* --- ÉTAPE 3 : MODE AUTO / MANUEL & ZOOM --- */
-        .mode-toggle-group {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
-        }
+        /* --- MODE AUTO / MANUEL & ZOOM --- */
+        .mode-toggle-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .mode-btn {
             background: #ffffff; color: var(--text-dark); border: 2px solid var(--border);
             border-radius: 10px; padding: 10px 8px; font-weight: 800; font-size: 0.85rem;
             cursor: pointer; text-align: center; box-shadow: none;
         }
-        .mode-btn.active {
-            background: #eef4fc; color: var(--primary); border-color: var(--primary);
-        }
+        .mode-btn.active { background: #eef4fc; color: var(--primary); border-color: var(--primary); }
 
         .preview-scroll-container {
             width: 100%; height: 38vh; min-height: 270px; background: #e9ecef; overflow: auto; 
@@ -223,7 +199,7 @@
         }
         input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 12px; }
 
-        /* --- ÉTAPE 4 : REORGANISATION --- */
+        /* --- REORGANISATION --- */
         .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .page-card {
             display: flex; align-items: center; background: white; border: 2px solid var(--border);
@@ -236,7 +212,7 @@
         .btn-move:active { background: #e2e6ea; }
         .btn-delete { background: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; border-radius: 8px; width: 40px; height: 40px; font-size: 1.1rem; box-shadow: none; }
 
-        /* --- ÉTAPE 5 : FINALISATION --- */
+        /* --- FINALISATION --- */
         .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
         .input-group label { font-size: 0.85rem; font-weight: 800; color: #2c3e50; }
         .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; transition: border-color 0.2s;}
@@ -254,14 +230,6 @@
     </style>
 </head>
 <body>
-
-    <!-- MODAL -->
-    <div id="custom-modal" class="modal-overlay">
-        <div class="modal-content">
-            <p>Cadrage automatique impossible, veuillez le faire manuellement.</p>
-            <button onclick="closeModal()" style="width: 100%;">Compris</button>
-        </div>
-    </div>
 
     <!-- TOAST -->
     <div id="toast-message" class="toast-notification">✓ Document généré avec succès !</div>
@@ -322,7 +290,6 @@
 
         <p class="instruction" style="margin-bottom: 8px;">Ajustez le cadre bleu sur les bords de la feuille.</p>
 
-        <!-- Bouton IA avec désactivation visuelle claire -->
         <button type="button" id="btn-auto-crop" class="magic" onclick="autoDetectFrame()" disabled>
             ⏳ Chargement de l'IA...
         </button>
@@ -339,7 +306,7 @@
             <button type="button" class="icon-btn-tool" onclick="rotateSource(90)" title="Pivoter à droite">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
             </button>
-            <button type="button" class="icon-btn-tool" onclick="resetPoints()" title="Réinitialiser le cadre">
+            <button type="button" class="icon-btn-tool" onclick="resetPointsFallback()" title="Réinitialiser le cadre">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V2"/><path d="M2 4h20"/><path d="M20 2v20"/><path d="M22 20H2"/></svg>
             </button>
         </div>
@@ -488,10 +455,6 @@
                 checkFormFields();
             }
         }
-
-        // --- POPUP & TOAST ---
-        function openModal() { document.getElementById('custom-modal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
         
         function showToast() {
             const toast = document.getElementById('toast-message');
@@ -599,13 +562,14 @@
             }
         }
 
-        // --- IA AUTO-CADRAGE (Votre code d'origine 100% fiable) ---
+        // --- IA AUTO-CADRAGE (Architecture Fail-Safe) ---
         function autoDetectFrame() {
             if (!window.cvReady) return;
 
-            let src, gray, edges, M, contours, hierarchy, bestContour;
+            let src, gray, edges, contours, hierarchy, bestContour;
             try {
-                const maxDim = 800;
+                // Diminution stricte de la charge mémoire
+                const maxDim = 500;
                 let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
                 if (scale < 1) scale = 1;
                 
@@ -623,24 +587,26 @@
                 cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
                 
                 edges = new cv.Mat();
-                cv.Canny(gray, edges, 50, 150);
+                cv.Canny(gray, edges, 30, 100);
                 
-                M = cv.Mat.ones(5, 5, cv.CV_8U);
+                let M = cv.Mat.ones(3, 3, cv.CV_8U);
                 cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+                M.delete();
                 
                 contours = new cv.MatVector();
                 hierarchy = new cv.Mat();
-                cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
                 
                 let maxArea = 0;
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
                     
-                    if (area > (rw * rh * 0.15)) {
+                    if (area > (rw * rh * 0.1)) {
                         let perimeter = cv.arcLength(cnt, true);
                         let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
+                        // Tolérance relâchée (5%) pour éviter les erreurs
+                        cv.approxPolyDP(cnt, approx, 0.05 * perimeter, true);
                         
                         if (approx.rows === 4 && area > maxArea) {
                             maxArea = area;
@@ -660,40 +626,41 @@
                     let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
                     let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
                     corners = [top[0], top[1], bottom[0], bottom[1]];
-                    requestAnimationFrame(drawSource);
                 } else {
-                    openModal();
+                    // Poka-Yoke : Action transparente sans message d'erreur bloquant
+                    resetPointsFallback();
                 }
+                requestAnimationFrame(drawSource);
             } catch (e) {
-                console.error(e);
-                alert("Erreur de calcul : " + e.message); // Aide au diagnostic si le crash persiste
+                console.error("OpenCV Fail-Safe déclenché:", e);
+                resetPointsFallback();
+                requestAnimationFrame(drawSource);
             } finally {
-                if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete(); if (M) M.delete();
+                if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete();
                 if (contours) contours.delete(); if (hierarchy) hierarchy.delete();
                 if (bestContour) bestContour.delete();
             }
         }
 
-        // --- ÉTAPE 2 : RECADRAGE MANUEL FLUIDE ---
+        // --- RECADRAGE MANUEL FLUIDE ---
         function setupSourceCanvas() {
             sourceCanvas.width = rawImage.width;
             sourceCanvas.height = rawImage.height;
-            resetPoints();
+            resetPointsFallback();
+            requestAnimationFrame(drawSource);
         }
 
-        function resetPoints() {
+        function resetPointsFallback() {
             const w = sourceCanvas.width;
             const h = sourceCanvas.height;
             const padX = w * 0.05;
             const padY = h * 0.05;
-
             corners = [
                 { x: padX, y: padY },
                 { x: w - padX, y: padY },
                 { x: w - padX, y: h - padY },
                 { x: padX, y: h - padY }
             ];
-            requestAnimationFrame(drawSource);
         }
 
         function drawSource() {
@@ -970,7 +937,7 @@
                     document.getElementById('result-alert-banner').style.display = 'none';
                     return;
                 } catch (e) {
-                    console.error("Erreur filtre IA, repli sur le mode standard :", e);
+                    console.error("Erreur filtre IA, repli manuel :", e);
                 } finally {
                     if (src) src.delete();
                     if (gray) gray.delete();
