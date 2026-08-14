@@ -583,78 +583,107 @@
         }
 
         // --- IA AUTO-CADRAGE ---
-        function autoDetectFrame() {
-            if (!window.cvReady) return;
+      // --- IA AUTO-CADRAGE ---
+function autoDetectFrame() {
+    if (!window.cvReady) { 
+        alert("L'intelligence artificielle n'est pas encore prête."); 
+        return; 
+    }
 
-            let src, gray, edges, M, contours, hierarchy, bestContour;
-            try {
-                const maxDim = 600;
-                let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
-                if (scale < 1) scale = 1;
+    let src, gray, edges, M, contours, hierarchy, bestContour;
+    
+    try {
+        // 1. Redimensionnement temporaire pour alléger la RAM
+        const maxDim = 800;
+        let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
+        if (scale < 1) scale = 1;
+        
+        let rw = Math.round(rawImage.width / scale);
+        let rh = Math.round(rawImage.height / scale);
+        
+        let tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = rw; 
+        tmpCanvas.height = rh;
+        let tmpCtx = tmpCanvas.getContext('2d');
+        tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
+        
+        // 2. Traitement d'image OpenCV
+        src = cv.imread(tmpCanvas);
+        gray = new cv.Mat();
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+        cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+        
+        edges = new cv.Mat();
+        cv.Canny(gray, edges, 75, 200);
+        
+        // 3. Fermeture morphologique (Dilatation puis Érosion) pour connecter les lignes brisées
+        M = cv.Mat.ones(3, 3, cv.CV_8U);
+        cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+        cv.erode(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+        
+        // 4. Extraction des contours
+        contours = new cv.MatVector();
+        hierarchy = new cv.Mat();
+        cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+        
+        let maxArea = 0;
+        
+        // 5. Filtrage des contours stricts
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);
+            let area = cv.contourArea(cnt);
+            
+            // Rejet des zones trop petites (<10%) et des fausses bordures d'écran (>98%)
+            if (area > (rw * rh * 0.10) && area < (rw * rh * 0.98)) {
+                let perimeter = cv.arcLength(cnt, true);
+                let approx = new cv.Mat();
                 
-                let rw = Math.round(rawImage.width / scale);
-                let rh = Math.round(rawImage.height / scale);
+                // Précision ramenée à 0.02 (Standard pour la détection quadrilatère)
+                cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
                 
-                let tmpCanvas = document.createElement('canvas');
-                tmpCanvas.width = rw; tmpCanvas.height = rh;
-                let tmpCtx = tmpCanvas.getContext('2d');
-                tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
-                
-                src = cv.imread(tmpCanvas);
-                gray = new cv.Mat();
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-                
-                edges = new cv.Mat();
-                cv.Canny(gray, edges, 50, 150);
-                
-                M = cv.Mat.ones(5, 5, cv.CV_8U);
-                cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
-                
-                contours = new cv.MatVector();
-                hierarchy = new cv.Mat();
-                cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-                
-                let maxArea = 0;
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-                    
-                    if (area > (rw * rh * 0.15)) {
-                        let perimeter = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
-                        
-                        if (approx.rows === 4 && area > maxArea) {
-                            maxArea = area;
-                            if (bestContour) bestContour.delete();
-                            bestContour = approx.clone();
-                        }
-                        approx.delete();
-                    }
+                if (approx.rows === 4 && area > maxArea) {
+                    maxArea = area;
+                    if (bestContour) bestContour.delete();
+                    bestContour = approx.clone();
                 }
-                
-                if (bestContour) {
-                    let pts = [];
-                    for (let i = 0; i < 4; i++) {
-                        pts.push({ x: bestContour.data32S[i * 2] * scale, y: bestContour.data32S[i * 2 + 1] * scale });
-                    }
-                    pts.sort((a,b) => a.y - b.y);
-                    let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
-                    let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
-                    corners = [top[0], top[1], bottom[0], bottom[1]];
-                    requestAnimationFrame(drawSource);
-                } else {
-                    openModal();
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete(); if (M) M.delete();
-                if (contours) contours.delete(); if (hierarchy) hierarchy.delete();
-                if (bestContour) bestContour.delete();
+                approx.delete();
             }
         }
+        
+        // 6. Application du cadre
+        if (bestContour) {
+            let pts = [];
+            for (let i = 0; i < 4; i++) {
+                pts.push({ 
+                    x: bestContour.data32S[i * 2] * scale, 
+                    y: bestContour.data32S[i * 2 + 1] * scale 
+                });
+            }
+            
+            // Tri logique des axes pour bloquer la formation "en sablier"
+            pts.sort((a,b) => a.y - b.y);
+            let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
+            let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
+            corners = [top[0], top[1], bottom[0], bottom[1]];
+            
+            requestAnimationFrame(drawSource);
+        } else {
+            openModal();
+        }
+    } catch (e) {
+        console.error("Erreur OpenCV: ", e);
+        openModal();
+    } finally {
+        // Libération systématique de la mémoire
+        if (src) src.delete(); 
+        if (gray) gray.delete(); 
+        if (edges) edges.delete(); 
+        if (M) M.delete();
+        if (contours) contours.delete(); 
+        if (hierarchy) hierarchy.delete();
+        if (bestContour) bestContour.delete();
+    }
+}
 
         // --- ÉTAPE 2 : RECADRAGE MANUEL FLUIDE ---
         function setupSourceCanvas() {
