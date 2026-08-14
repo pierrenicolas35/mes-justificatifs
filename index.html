@@ -437,7 +437,7 @@
         let dragStartPos = null; let dragStartCorners = null;
         let currentZoom = 100;
         let isDrawing = false;
-        let currentEnhanceMode = 'auto'; // 'auto' (IA) ou 'manual'
+        let currentEnhanceMode = 'auto'; 
 
         let unbinarizedCanvas = document.createElement('canvas');
         let pdfPageQueue = [];
@@ -582,128 +582,120 @@
             }
         }
 
-// --- IA AUTO-CADRAGE (Process Fiabilisé avec Fallback) ---
-function autoDetectFrame() {
-    if (!window.cvReady) { 
-        alert("L'intelligence artificielle n'est pas encore chargée."); 
-        return; 
-    }
+        // --- IA AUTO-CADRAGE (Correction 100% Safe) ---
+        function autoDetectFrame() {
+            if (!window.cvReady) { 
+                alert("L'intelligence artificielle n'est pas encore chargée."); 
+                return; 
+            }
 
-    let src, gray, blur, edges, contours, hierarchy, hull, approx;
-    
-    try {
-        // Redimensionnement pour fluidité
-        const maxDim = 800;
-        let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
-        if (scale < 1) scale = 1;
-        
-        let rw = Math.round(rawImage.width / scale);
-        let rh = Math.round(rawImage.height / scale);
-        
-        let tmpCanvas = document.createElement('canvas');
-        tmpCanvas.width = rw; 
-        tmpCanvas.height = rh;
-        let tmpCtx = tmpCanvas.getContext('2d');
-        tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
-        
-        src = cv.imread(tmpCanvas);
-        gray = new cv.Mat();
-        blur = new cv.Mat();
-        edges = new cv.Mat();
-        
-        // 1. Filtrage et Binarisation (Otsu + Canny) pour contrer les arrière-plans complexes
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-        cv.threshold(blur, edges, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
-        cv.Canny(edges, edges, 50, 150);
-        
-        // 2. Dilatation pour joindre les lignes
-        let M = cv.Mat.ones(5, 5, cv.CV_8U);
-        cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
-        M.delete();
-        
-        contours = new cv.MatVector();
-        hierarchy = new cv.Mat();
-        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-        
-        // 3. Identification de la feuille (plus grand objet)
-        let maxArea = 0;
-        let bestContourIdx = -1;
-        
-        for (let i = 0; i < contours.size(); ++i) {
-            let area = cv.contourArea(contours.get(i));
-            // Tolérance d'inclusion : surface entre 5% et 98%
-            if (area > (rw * rh * 0.05) && area < (rw * rh * 0.98)) {
-                if (area > maxArea) {
-                    maxArea = area;
-                    bestContourIdx = i;
-                }
-            }
-        }
-        
-        if (bestContourIdx !== -1) {
-            let cnt = contours.get(bestContourIdx);
-            hull = new cv.Mat();
-            // Lisse la forme (gomme les coins cassés ou papier plié)
-            cv.convexHull(cnt, hull, false, true); 
+            let src, gray, blur, edges, M, contours, hierarchy, hull, approx;
             
-            let perimeter = cv.arcLength(hull, true);
-            approx = new cv.Mat();
-            let found4Points = false;
-            let finalPts = [];
-            
-            // Tentative itérative de détection du quadrilatère
-            for (let epsilon = 0.02; epsilon <= 0.1; epsilon += 0.01) {
-                cv.approxPolyDP(hull, approx, epsilon * perimeter, true);
-                if (approx.rows === 4) {
-                    found4Points = true;
-                    for (let i = 0; i < 4; i++) {
-                        finalPts.push({ 
-                            x: approx.data32S[i * 2] * scale, 
-                            y: approx.data32S[i * 2 + 1] * scale 
-                        });
+            try {
+                const maxDim = 800;
+                let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
+                if (scale < 1) scale = 1;
+                
+                let rw = Math.round(rawImage.width / scale);
+                let rh = Math.round(rawImage.height / scale);
+                
+                let tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = rw; 
+                tmpCanvas.height = rh;
+                let tmpCtx = tmpCanvas.getContext('2d');
+                tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
+                
+                src = cv.imread(tmpCanvas);
+                gray = new cv.Mat();
+                blur = new cv.Mat();
+                edges = new cv.Mat();
+                
+                // 1. Filtrage et Binarisation allégés et compatibles Web
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+                cv.Canny(blur, edges, 50, 150);
+                
+                // 2. Dilatation basique et universelle
+                M = cv.Mat.ones(5, 5, cv.CV_8U);
+                cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1);
+                
+                contours = new cv.MatVector();
+                hierarchy = new cv.Mat();
+                cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                
+                // 3. Identification de la feuille
+                let maxArea = 0;
+                let bestContourIdx = -1;
+                
+                for (let i = 0; i < contours.size(); ++i) {
+                    let area = cv.contourArea(contours.get(i));
+                    if (area > (rw * rh * 0.05) && area < (rw * rh * 0.98)) {
+                        if (area > maxArea) {
+                            maxArea = area;
+                            bestContourIdx = i;
+                        }
                     }
-                    break;
                 }
+                
+                if (bestContourIdx !== -1) {
+                    let cnt = contours.get(bestContourIdx);
+                    hull = new cv.Mat();
+                    cv.convexHull(cnt, hull, false, true); 
+                    
+                    let perimeter = cv.arcLength(hull, true);
+                    approx = new cv.Mat();
+                    let found4Points = false;
+                    let finalPts = [];
+                    
+                    for (let epsilon = 0.02; epsilon <= 0.1; epsilon += 0.01) {
+                        cv.approxPolyDP(hull, approx, epsilon * perimeter, true);
+                        if (approx.rows === 4) {
+                            found4Points = true;
+                            for (let i = 0; i < 4; i++) {
+                                finalPts.push({ 
+                                    x: approx.data32S[i * 2] * scale, 
+                                    y: approx.data32S[i * 2 + 1] * scale 
+                                });
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (!found4Points) {
+                        let rect = cv.boundingRect(hull);
+                        finalPts = [
+                            { x: rect.x * scale, y: rect.y * scale },
+                            { x: (rect.x + rect.width) * scale, y: rect.y * scale },
+                            { x: (rect.x + rect.width) * scale, y: (rect.y + rect.height) * scale },
+                            { x: rect.x * scale, y: (rect.y + rect.height) * scale }
+                        ];
+                    }
+                    
+                    finalPts.sort((a,b) => a.y - b.y);
+                    let top = [finalPts[0], finalPts[1]].sort((a,b) => a.x - b.x);
+                    let bottom = [finalPts[2], finalPts[3]].sort((a,b) => b.x - a.x);
+                    corners = [top[0], top[1], bottom[0], bottom[1]];
+                    
+                    requestAnimationFrame(drawSource);
+                } else {
+                    openModal();
+                }
+            } catch (e) {
+                console.error("Erreur OpenCV: ", e);
+                openModal();
+            } finally {
+                if (src) src.delete(); 
+                if (gray) gray.delete(); 
+                if (blur) blur.delete();
+                if (edges) edges.delete(); 
+                if (M) M.delete();
+                if (contours) contours.delete(); 
+                if (hierarchy) hierarchy.delete();
+                if (hull) hull.delete();
+                if (approx) approx.delete();
             }
-            
-            // POKA-YOKE : Si impossible de trouver 4 coins stricts, on force un rectangle englobant
-            if (!found4Points) {
-                let rect = cv.boundingRect(hull);
-                finalPts = [
-                    { x: rect.x * scale, y: rect.y * scale },
-                    { x: (rect.x + rect.width) * scale, y: rect.y * scale },
-                    { x: (rect.x + rect.width) * scale, y: (rect.y + rect.height) * scale },
-                    { x: rect.x * scale, y: (rect.y + rect.height) * scale }
-                ];
-            }
-            
-            // Logique de tri spatial (Haut-Gauche, Haut-Droit, etc.)
-            finalPts.sort((a,b) => a.y - b.y);
-            let top = [finalPts[0], finalPts[1]].sort((a,b) => a.x - b.x);
-            let bottom = [finalPts[2], finalPts[3]].sort((a,b) => b.x - a.x);
-            corners = [top[0], top[1], bottom[0], bottom[1]];
-            
-            requestAnimationFrame(drawSource);
-            
-        } else {
-            openModal();
         }
-    } catch (e) {
-        console.error("Erreur OpenCV: ", e);
-        openModal();
-    } finally {
-        // Libération de l'allocation C++ WebAssembly
-        if (src) src.delete(); 
-        if (gray) gray.delete(); 
-        if (blur) blur.delete();
-        if (edges) edges.delete(); 
-        if (contours) contours.delete(); 
-        if (hierarchy) hierarchy.delete();
-        if (typeof hull !== 'undefined') hull.delete();
-        if (typeof approx !== 'undefined') approx.delete();
-    }
-}
+
         // --- ÉTAPE 2 : RECADRAGE MANUEL FLUIDE ---
         function setupSourceCanvas() {
             sourceCanvas.width = rawImage.width;
@@ -950,12 +942,10 @@ function autoDetectFrame() {
             }
             uCtx.putImageData(outImgData, 0, 0);
             
-            // Mode automatique par défaut
             setEnhanceMode('auto');
             goToStep(3);
         }
 
-        // Bascule entre mode Auto (IA) et Manuel
         function setEnhanceMode(mode) {
             currentEnhanceMode = mode;
             const btnAuto = document.getElementById('btn-mode-auto');
@@ -975,11 +965,9 @@ function autoDetectFrame() {
             }
         }
 
-        // Nettoyage et contraste IA Automatique (Adaptive Thresholding)
         function applyAutoEnhanceIA() {
             if (!unbinarizedCanvas.width) return;
 
-            // Si OpenCV est disponible, utilisation du seuil adaptatif local
             if (window.cvReady) {
                 let src, gray, binary;
                 try {
@@ -990,7 +978,6 @@ function autoDetectFrame() {
                     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
                     cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
 
-                    // Adaptive Thresholding : calcule le seuil zone par zone pour effacer les ombres
                     cv.adaptiveThreshold(
                         gray, 
                         binary, 
@@ -1013,11 +1000,9 @@ function autoDetectFrame() {
                 }
             }
 
-            // Repli automatique si OpenCV n'est pas encore prêt
             applyBinarizationManual(130);
         }
 
-        // Réglage manuel par curseur
         function applyBinarizationManual(forcedThreshold = null) {
             if (!unbinarizedCanvas.width) return;
             const threshold = forcedThreshold !== null ? forcedThreshold : parseInt(document.getElementById('threshold').value);
@@ -1036,7 +1021,6 @@ function autoDetectFrame() {
             }
             rCtx.putImageData(imageData, 0, 0);
 
-            // Alerte Qualité Manuel
             const inkPercentage = (blackPixels / totalPixels) * 100;
             const alertBanner = document.getElementById('result-alert-banner');
             
