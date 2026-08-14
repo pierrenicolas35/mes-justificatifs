@@ -582,16 +582,17 @@
             }
         }
 
-// --- IA AUTO-CADRAGE (Algorithme Multi-passes) ---
+// --- IA AUTO-CADRAGE (Process Fiabilisé avec Fallback) ---
 function autoDetectFrame() {
     if (!window.cvReady) { 
-        alert("L'intelligence artificielle n'est pas encore prête."); 
+        alert("L'intelligence artificielle n'est pas encore chargée."); 
         return; 
     }
 
-    let src, gray, blur, edges, M, contours, hierarchy, bestContour;
+    let src, gray, blur, edges, contours, hierarchy, hull, approx;
     
     try {
+        // Redimensionnement pour fluidité
         const maxDim = 800;
         let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
         if (scale < 1) scale = 1;
@@ -610,66 +611,81 @@ function autoDetectFrame() {
         blur = new cv.Mat();
         edges = new cv.Mat();
         
-        // 1. Lissage et détection des arêtes
+        // 1. Filtrage et Binarisation (Otsu + Canny) pour contrer les arrière-plans complexes
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
         cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-        cv.Canny(blur, edges, 50, 150);
+        cv.threshold(blur, edges, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
+        cv.Canny(edges, edges, 50, 150);
         
-        // 2. Dilatation forte pour connecter les lignes brisées
-        M = cv.Mat.ones(5, 5, cv.CV_8U);
+        // 2. Dilatation pour joindre les lignes
+        let M = cv.Mat.ones(5, 5, cv.CV_8U);
         cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+        M.delete();
         
         contours = new cv.MatVector();
         hierarchy = new cv.Mat();
-        cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
         
-        // 3. Tri des contours par superficie (du plus grand au plus petit)
-        let sortableContours = [];
+        // 3. Identification de la feuille (plus grand objet)
+        let maxArea = 0;
+        let bestContourIdx = -1;
+        
         for (let i = 0; i < contours.size(); ++i) {
-            let cnt = contours.get(i);
-            let area = cv.contourArea(cnt);
-            // Tolérance d'inclusion : entre 10% et 99% de l'image
-            if (area > (rw * rh * 0.10) && area < (rw * rh * 0.99)) {
-                sortableContours.push({ contour: cnt, area: area });
+            let area = cv.contourArea(contours.get(i));
+            // Tolérance d'inclusion : surface entre 5% et 98%
+            if (area > (rw * rh * 0.05) && area < (rw * rh * 0.98)) {
+                if (area > maxArea) {
+                    maxArea = area;
+                    bestContourIdx = i;
+                }
             }
         }
-        sortableContours.sort((a, b) => b.area - a.area);
         
-        // 4. Boucle d'approximation itérative sur les meilleurs contours
-        for (let i = 0; i < sortableContours.length; i++) {
-            let cnt = sortableContours[i].contour;
-            let perimeter = cv.arcLength(cnt, true);
-            let approx = new cv.Mat();
+        if (bestContourIdx !== -1) {
+            let cnt = contours.get(bestContourIdx);
+            hull = new cv.Mat();
+            // Lisse la forme (gomme les coins cassés ou papier plié)
+            cv.convexHull(cnt, hull, false, true); 
             
-            // On teste des tolérances de plus en plus souples (1% à 8%)
-            for (let epsilon = 0.01; epsilon <= 0.08; epsilon += 0.01) {
-                cv.approxPolyDP(cnt, approx, epsilon * perimeter, true);
+            let perimeter = cv.arcLength(hull, true);
+            approx = new cv.Mat();
+            let found4Points = false;
+            let finalPts = [];
+            
+            // Tentative itérative de détection du quadrilatère
+            for (let epsilon = 0.02; epsilon <= 0.1; epsilon += 0.01) {
+                cv.approxPolyDP(hull, approx, epsilon * perimeter, true);
                 if (approx.rows === 4) {
-                    bestContour = approx.clone();
+                    found4Points = true;
+                    for (let i = 0; i < 4; i++) {
+                        finalPts.push({ 
+                            x: approx.data32S[i * 2] * scale, 
+                            y: approx.data32S[i * 2 + 1] * scale 
+                        });
+                    }
                     break;
                 }
             }
-            approx.delete();
-            if (bestContour) break; // Sortie immédiate si 4 coins trouvés
-        }
-        
-        // 5. Application des coordonnées
-        if (bestContour) {
-            let pts = [];
-            for (let i = 0; i < 4; i++) {
-                pts.push({ 
-                    x: bestContour.data32S[i * 2] * scale, 
-                    y: bestContour.data32S[i * 2 + 1] * scale 
-                });
+            
+            // POKA-YOKE : Si impossible de trouver 4 coins stricts, on force un rectangle englobant
+            if (!found4Points) {
+                let rect = cv.boundingRect(hull);
+                finalPts = [
+                    { x: rect.x * scale, y: rect.y * scale },
+                    { x: (rect.x + rect.width) * scale, y: rect.y * scale },
+                    { x: (rect.x + rect.width) * scale, y: (rect.y + rect.height) * scale },
+                    { x: rect.x * scale, y: (rect.y + rect.height) * scale }
+                ];
             }
             
-            // Tri géométrique pour bloquer la formation "en sablier"
-            pts.sort((a,b) => a.y - b.y);
-            let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
-            let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
+            // Logique de tri spatial (Haut-Gauche, Haut-Droit, etc.)
+            finalPts.sort((a,b) => a.y - b.y);
+            let top = [finalPts[0], finalPts[1]].sort((a,b) => a.x - b.x);
+            let bottom = [finalPts[2], finalPts[3]].sort((a,b) => b.x - a.x);
             corners = [top[0], top[1], bottom[0], bottom[1]];
             
             requestAnimationFrame(drawSource);
+            
         } else {
             openModal();
         }
@@ -677,15 +693,15 @@ function autoDetectFrame() {
         console.error("Erreur OpenCV: ", e);
         openModal();
     } finally {
-        // Libération de la mémoire tampon
+        // Libération de l'allocation C++ WebAssembly
         if (src) src.delete(); 
         if (gray) gray.delete(); 
         if (blur) blur.delete();
         if (edges) edges.delete(); 
-        if (M) M.delete();
         if (contours) contours.delete(); 
         if (hierarchy) hierarchy.delete();
-        if (bestContour) bestContour.delete();
+        if (typeof hull !== 'undefined') hull.delete();
+        if (typeof approx !== 'undefined') approx.delete();
     }
 }
         // --- ÉTAPE 2 : RECADRAGE MANUEL FLUIDE ---
