@@ -35,7 +35,6 @@
 
     <style>
         :root {
-            /* Bleu CHU Grenoble Alpes */
             --primary: #009ce0; 
             --primary-hover: #007eb5;
             --success: #28a745;
@@ -54,14 +53,14 @@
             overflow-y: auto;
         }
 
-        /* --- SYSTÈME DE VUES --- */
+        /* --- VUES --- */
         .app-view {
             display: none; flex-direction: column; width: 100vw; min-height: 100vh;
             padding: 15px; background: var(--bg); overflow-y: auto;
         }
         .app-view.active { display: flex; }
 
-        /* --- ÉCRAN D'ACCUEIL (BIENVENUE) --- */
+        /* --- ACCUEIL --- */
         .welcome-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: white; border-radius: 16px; padding: 35px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
@@ -77,7 +76,7 @@
             background: #eef4fc; color: var(--primary); border-radius: 50%; font-weight: 800; font-size: 0.85rem; 
         }
 
-        /* --- EN-TÊTE COMMUN --- */
+        /* --- EN-TÊTES --- */
         .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
         
@@ -108,7 +107,6 @@
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
         
-        /* Correction : Bouton IA sous forme de pilule compacte */
         button.magic { 
             background-color: #ffffff; 
             color: var(--primary); 
@@ -126,7 +124,7 @@
         
         .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
 
-        /* --- ÉTAPE 1 : IMPORTATION --- */
+        /* --- IMPORT --- */
         .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: 15px 0; }
         .btn-import-option {
             background: #ffffff; border: 2px solid var(--border); border-radius: 16px;
@@ -137,17 +135,17 @@
         .btn-import-option:active { transform: scale(0.97); background: #f0f6ff; border-color: var(--primary); }
         .btn-import-option img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 
-        /* --- ÉTAPE 2 : RECADRAGE --- */
+        /* --- RECADRAGE --- */
         .fullscreen-crop-wrapper {
             position: relative; width: 100%; height: 50vh; min-height: 350px;
             background-color: #1a1a1a; border-radius: 12px; overflow: hidden;
             display: flex; justify-content: center; align-items: center; margin-bottom: 15px;
         }
-        #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
+        #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; will-change: contents; }
         #loupe-canvas {
             display: none; position: absolute; width: 110px; height: 110px; border-radius: 50%;
             border: 3px solid var(--primary); background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            pointer-events: none; z-index: 50;
+            pointer-events: none; z-index: 50; will-change: transform;
         }
 
         .toolbar-tools { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;}
@@ -164,7 +162,7 @@
             background-color: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; text-align: center;
         }
 
-        /* --- MODAL CUSTOM (AUTO-CROP ERROR) --- */
+        /* --- MODAL --- */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
@@ -175,7 +173,7 @@
         }
         .modal-content p { font-size: 1rem; font-weight: 700; color: #2c3e50; margin-bottom: 20px; line-height: 1.4; }
 
-        /* --- TOAST NOTIFICATION --- */
+        /* --- TOAST --- */
         .toast-notification {
             position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
             background: var(--success); color: white; padding: 12px 24px; border-radius: 30px;
@@ -184,7 +182,7 @@
         }
         .toast-notification.show { bottom: 30px; }
 
-        /* --- ÉTAPE 3 : APERÇU ET ZOOM --- */
+        /* --- APERÇU ET ZOOM --- */
         .preview-scroll-container {
             width: 100%; height: 40vh; min-height: 300px; background: #e9ecef; overflow: auto; 
             border-radius: 10px; border: 2px solid var(--border); margin-bottom: 15px;
@@ -195,7 +193,7 @@
         }
         input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 15px; }
 
-        /* --- ÉTAPE 4 : REORGANISATION --- */
+        /* --- REORGANISATION --- */
         .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .page-card {
             display: flex; align-items: center; background: white; border: 2px solid var(--border);
@@ -208,7 +206,7 @@
         .btn-move:active { background: #e2e6ea; }
         .btn-delete { background: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; border-radius: 8px; width: 40px; height: 40px; font-size: 1.1rem; box-shadow: none; }
 
-        /* --- ÉTAPE 5 : FINALISATION --- */
+        /* --- FINALISATION --- */
         .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
         .input-group label { font-size: 0.85rem; font-weight: 800; color: #2c3e50; }
         .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; transition: border-color 0.2s;}
@@ -227,7 +225,7 @@
 </head>
 <body>
 
-    <!-- MODAL PERSONNALISÉ POUR ERREUR AUTO-CROP -->
+    <!-- MODAL -->
     <div id="custom-modal" class="modal-overlay">
         <div class="modal-content">
             <p>Cadrage automatique impossible, veuillez le faire manuellement.</p>
@@ -235,10 +233,10 @@
         </div>
     </div>
 
-    <!-- NOTIFICATION DE SUCCÈS -->
+    <!-- TOAST -->
     <div id="toast-message" class="toast-notification">✓ Document généré avec succès !</div>
 
-    <!-- ================= VUE 0 : ACCUEIL BIENVENUE ================= -->
+    <!-- ================= VUE 0 : BIENVENUE ================= -->
     <div id="step-0" class="app-view active">
         <div class="welcome-container">
             <h1 class="welcome-title">Mes justificatifs</h1>
@@ -294,7 +292,6 @@
 
         <p class="instruction" style="margin-bottom: 8px;">Ajustez le cadre bleu sur les bords de la feuille.</p>
 
-        <!-- Bouton IA optimisé en taille et style -->
         <button type="button" id="btn-auto-crop" class="magic" onclick="autoDetectFrame()" disabled>
             ⏳ Chargement de l'IA...
         </button>
@@ -391,7 +388,6 @@
             </div>
 
             <div class="action-buttons-grid">
-                <!-- Boutons grisés par défaut -->
                 <div class="btn-export disabled" id="btn-download" onclick="exportPDF('download')">
                     <img src="https://cdn-icons-png.flaticon.com/512/337/337946.png" alt="Télécharger PDF">
                     <span>Télécharger le PDF</span>
@@ -409,12 +405,13 @@
     </div>
 
     <script>
-        // --- ETAT GLOBAL ---
+        // --- ÉTAT GLOBAL ---
         let rawImage = new Image();
         let corners = [];
         let activePoint = -1; let activeEdge = -1;
         let dragStartPos = null; let dragStartCorners = null;
         let currentZoom = 100;
+        let isDrawing = false;
 
         let unbinarizedCanvas = document.createElement('canvas');
         let pdfPageQueue = [];
@@ -449,7 +446,7 @@
             }
         }
 
-        // --- GESTION POPUP & TOAST ---
+        // --- POPUP & TOAST ---
         function openModal() { document.getElementById('custom-modal').style.display = 'flex'; }
         function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
         
@@ -459,7 +456,7 @@
             setTimeout(() => { toast.classList.remove('show'); }, 3500);
         }
 
-        // --- ÉTAPE 1 : IMPORTATION ---
+        // --- ÉTAPE 1 : IMPORTATION & COMPRESSION ULTRA-RAPIDE ---
         function triggerInput(type) {
             if (type === 'camera') { inputCamera.value = ''; inputCamera.click(); }
             else { inputGallery.value = ''; inputGallery.click(); }
@@ -472,20 +469,45 @@
             if (!file.type.startsWith('image/')) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                rawImage = new Image();
-                rawImage.onload = () => {
-                    analyzeSourceImage(); 
-                    goToStep(2);
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    // Compression et limitation à 1600px max (Fluidité totale à 60 FPS)
+                    const maxDim = 1600;
+                    let w = tempImg.width;
+                    let h = tempImg.height;
+                    
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+
+                    const compressCanvas = document.createElement('canvas');
+                    compressCanvas.width = w;
+                    compressCanvas.height = h;
+                    const cCtx = compressCanvas.getContext('2d');
+                    cCtx.drawImage(tempImg, 0, 0, w, h);
+
+                    rawImage = new Image();
+                    rawImage.onload = () => {
+                        analyzeSourceImage();
+                        goToStep(2);
+                    };
+                    rawImage.src = compressCanvas.toDataURL('image/jpeg', 0.88);
                 };
-                rawImage.src = e.target.result;
+                tempImg.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
 
-        // --- CONTRÔLE QUALITÉ SOURCE (Discret) ---
+        // --- CONTRÔLE QUALITÉ SOURCE ---
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
-            const maxDim = 500;
+            const maxDim = 400;
             let w = rawImage.width; let h = rawImage.height;
             if (w > maxDim || h > maxDim) {
                 if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
@@ -528,7 +550,7 @@
             const blurScore = varianceSum / count;
 
             const banner = document.getElementById('source-alert-banner');
-            if (blurScore < 100 || avgBrightness < 45) {
+            if (blurScore < 90 || avgBrightness < 40) {
                 banner.style.display = 'block';
             } else {
                 banner.style.display = 'none';
@@ -541,7 +563,7 @@
 
             let src, gray, edges, M, contours, hierarchy, bestContour;
             try {
-                const maxDim = 800;
+                const maxDim = 600;
                 let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
                 if (scale < 1) scale = 1;
                 
@@ -596,7 +618,7 @@
                     let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
                     let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
                     corners = [top[0], top[1], bottom[0], bottom[1]];
-                    drawSource();
+                    requestAnimationFrame(drawSource);
                 } else {
                     openModal();
                 }
@@ -609,7 +631,7 @@
             }
         }
 
-        // --- ÉTAPE 2 : RECADRAGE MANUEL ---
+        // --- ÉTAPE 2 : RECADRAGE MANUEL FLUIDE ---
         function setupSourceCanvas() {
             sourceCanvas.width = rawImage.width;
             sourceCanvas.height = rawImage.height;
@@ -628,7 +650,7 @@
                 { x: w - padX, y: h - padY },
                 { x: padX, y: h - padY }
             ];
-            drawSource();
+            requestAnimationFrame(drawSource);
         }
 
         function drawSource() {
@@ -683,6 +705,7 @@
                 sCtx.beginPath(); sCtx.arc(pt.x, pt.y, radius / 4, 0, Math.PI * 2);
                 sCtx.fillStyle = 'var(--primary)'; sCtx.fill();
             });
+            isDrawing = false;
         }
 
         function updateLoupe(pos) {
@@ -782,7 +805,11 @@
                 corners[idx2].x = Math.max(0, Math.min(sourceCanvas.width, dragStartCorners[idx2].x + deltaX));
                 corners[idx2].y = Math.max(0, Math.min(sourceCanvas.height, dragStartCorners[idx2].y + deltaY));
             }
-            drawSource();
+
+            if (!isDrawing) {
+                isDrawing = true;
+                requestAnimationFrame(drawSource);
+            }
         }
 
         function handleEnd() { 
@@ -871,7 +898,7 @@
             }
             rCtx.putImageData(imageData, 0, 0);
 
-            // Alerte Qualité Dynamique Étape 3
+            // Alerte Qualité
             const inkPercentage = (blackPixels / totalPixels) * 100;
             const alertBanner = document.getElementById('result-alert-banner');
             
@@ -975,7 +1002,9 @@
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
 
-            pdfPageQueue.forEach((page, index) => {
+            pagesToExport = pdfPageQueue;
+
+            pagesToExport.forEach((page, index) => {
                 if (index > 0) pdf.addPage();
                 const canvasRatio = page.width / page.height;
                 const pdfRatio = pdfWidth / pdfHeight;
@@ -1023,7 +1052,6 @@
                 showToast();
             }
 
-            // Reset after delay to let the download start
             setTimeout(() => { resetAppComplete(); }, 1500);
         }
 
@@ -1033,13 +1061,13 @@
             document.getElementById('agent-name').value = "";
             rawImage = new Image();
             checkFormFields();
-            goToStep(0); // Retour à la page de bienvenue
+            goToStep(0);
         }
 
-        // Initialisation de la vue
+        // Initialisation
         goToStep(0);
 
-        // PWA Registration
+        // PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
