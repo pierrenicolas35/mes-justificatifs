@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Optimisation des justificatifs</title>
+    <title>Mes justificatifs</title>
 
     <!-- Meta PWA Mobile -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0056b3">
+    <meta name="theme-color" content="#009ce0">
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2809/2809808.png">
@@ -17,7 +17,7 @@
     <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- OpenCV (Moteur IA chargé en arrière-plan) -->
+    <!-- OpenCV (Moteur IA) -->
     <script>
         window.cvReady = false;
         var Module = {
@@ -26,7 +26,7 @@
                 const btn = document.getElementById('btn-auto-crop');
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = "🪄 Cadrage Automatique (IA)";
+                    btn.innerHTML = "🪄 Cadrage Automatique";
                 }
             }
         };
@@ -35,8 +35,9 @@
 
     <style>
         :root {
-            --primary: #0056b3;
-            --primary-hover: #004494;
+            /* Bleu CHU Grenoble Alpes */
+            --primary: #009ce0; 
+            --primary-hover: #007eb5;
             --success: #28a745;
             --bg: #f4f7fa;
             --panel: #ffffff;
@@ -48,16 +49,36 @@
         
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg); color: var(--text-dark);
+            overflow-y: auto;
         }
 
+        /* --- SYSTÈME DE VUES --- */
         .app-view {
             display: none; flex-direction: column; width: 100vw; min-height: 100vh;
             padding: 15px; background: var(--bg); overflow-y: auto;
         }
         .app-view.active { display: flex; }
 
+        /* --- ÉCRAN D'ACCUEIL (BIENVENUE) --- */
+        .welcome-container {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: white; border-radius: 16px; padding: 30px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin: auto 0; text-align: center; border: 2px solid var(--border);
+        }
+        .welcome-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 20px; }
+        .welcome-title { font-size: 1.6rem; font-weight: 800; color: var(--primary); margin: 0 0 10px 0; }
+        .welcome-desc { font-size: 0.95rem; font-weight: 600; color: var(--text-muted); line-height: 1.5; margin-bottom: 25px; }
+        
+        .steps-list { width: 100%; text-align: left; margin-bottom: 30px; display: flex; flex-direction: column; gap: 12px; }
+        .step-item { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 0.95rem; color: #2c3e50; }
+        .step-num { 
+            display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; 
+            background: #eef4fc; color: var(--primary); border-radius: 50%; font-weight: 800; font-size: 0.85rem; 
+        }
+
+        /* --- EN-TÊTE COMMUN --- */
         .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
         
@@ -76,20 +97,22 @@
 
         .instruction { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 15px; }
 
+        /* --- BOUTONS --- */
         button {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
             background-color: var(--primary); color: white; border: none; padding: 14px;
             border-radius: 10px; font-weight: 800; font-size: 0.95rem; cursor: pointer; flex: 1;
-            box-shadow: 0 3px 8px rgba(0,86,179,0.2); transition: transform 0.1s;
+            box-shadow: 0 3px 8px rgba(0,156,224,0.3); transition: transform 0.1s;
         }
         button:active { transform: scale(0.97); }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
-        button.magic { background-color: #6f42c1; box-shadow: 0 3px 8px rgba(111,66,193,0.2); width: 100%; margin-bottom: 10px; }
+        button.magic { background-color: #ffffff; color: var(--primary); border: 2px solid var(--primary); box-shadow: none; width: 100%; margin-bottom: 10px; }
         
         .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
 
+        /* --- ÉTAPE 1 : IMPORTATION --- */
         .import-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin: 15px 0; }
         .btn-import-option {
             background: #ffffff; border: 2px solid var(--border); border-radius: 16px;
@@ -100,18 +123,17 @@
         .btn-import-option:active { transform: scale(0.97); background: #f0f6ff; border-color: var(--primary); }
         .btn-import-option img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 
+        /* --- ÉTAPE 2 : RECADRAGE --- */
         .fullscreen-crop-wrapper {
-            position: relative; width: 100%; flex-grow: 1; min-height: 350px;
+            position: relative; width: 100%; height: 50vh; min-height: 350px;
             background-color: #1a1a1a; border-radius: 12px; overflow: hidden;
             display: flex; justify-content: center; align-items: center; margin-bottom: 15px;
         }
         #source-canvas { position: absolute; max-width: 100%; max-height: 100%; touch-action: none; }
-
-        /* Style de la loupe d'aperçu */
         #loupe-canvas {
-            display: none; position: absolute; width: 110px; height: 110px;
-            border-radius: 50%; border: 3px solid var(--primary); background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; z-index: 50;
+            display: none; position: absolute; width: 110px; height: 110px; border-radius: 50%;
+            border: 3px solid var(--primary); background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            pointer-events: none; z-index: 50;
         }
 
         .toolbar-tools { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;}
@@ -128,6 +150,27 @@
             background-color: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; text-align: center;
         }
 
+        /* --- MODAL CUSTOM (AUTO-CROP ERROR) --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: white; padding: 25px; border-radius: 16px; width: 85%; max-width: 400px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .modal-content p { font-size: 1rem; font-weight: 700; color: #2c3e50; margin-bottom: 20px; line-height: 1.4; }
+
+        /* --- TOAST NOTIFICATION --- */
+        .toast-notification {
+            position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+            background: var(--success); color: white; padding: 12px 24px; border-radius: 30px;
+            font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2000;
+        }
+        .toast-notification.show { bottom: 30px; }
+
+        /* --- ÉTAPE 3 : APERÇU ET ZOOM --- */
         .preview-scroll-container {
             width: 100%; height: 40vh; min-height: 300px; background: #e9ecef; overflow: auto; 
             border-radius: 10px; border: 2px solid var(--border); margin-bottom: 15px;
@@ -138,6 +181,7 @@
         }
         input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: var(--border); outline: none; margin-bottom: 15px; }
 
+        /* --- ÉTAPE 4 : REORGANISATION --- */
         .pages-list-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .page-card {
             display: flex; align-items: center; background: white; border: 2px solid var(--border);
@@ -150,9 +194,10 @@
         .btn-move:active { background: #e2e6ea; }
         .btn-delete { background: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; border-radius: 8px; width: 40px; height: 40px; font-size: 1.1rem; box-shadow: none; }
 
+        /* --- ÉTAPE 5 : FINALISATION --- */
         .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
         .input-group label { font-size: 0.85rem; font-weight: 800; color: #2c3e50; }
-        .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; }
+        .input-group input { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; outline: none; transition: border-color 0.2s;}
         .input-group input:focus { border-color: var(--primary); }
 
         .action-buttons-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 10px; }
@@ -160,16 +205,49 @@
             display: flex; align-items: center; justify-content: flex-start; gap: 15px;
             padding: 15px; border-radius: 12px; border: 2px solid var(--border);
             background: white; font-size: 1.05rem; font-weight: 800; color: var(--text-dark);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04); transition: all 0.2s; cursor: pointer;
         }
         .btn-export img { width: 42px; height: 42px; }
+        .btn-export.disabled { opacity: 0.4; pointer-events: none; background: #f8f9fa; }
     </style>
 </head>
 <body>
 
+    <!-- MODAL PERSONNALISÉ POUR ERREUR AUTO-CROP -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-content">
+            <p>Cadrage automatique impossible, veuillez le faire manuellement.</p>
+            <button onclick="closeModal()" style="width: 100%;">Compris</button>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION DE SUCCÈS -->
+    <div id="toast-message" class="toast-notification">✓ Document généré avec succès !</div>
+
+    <!-- ================= VUE 0 : ACCUEIL BIENVENUE ================= -->
+    <div id="step-0" class="app-view active">
+        <div class="welcome-container">
+            <img src="1786685764841.jpg" alt="Logo CHU" class="welcome-logo">
+            <h1 class="welcome-title">Mes justificatifs</h1>
+            <p class="welcome-desc">
+                Cette application est faite pour améliorer la qualité des documents pris en photo et transmis à votre employeur, afin de faciliter leur traitement.
+            </p>
+            
+            <div class="steps-list">
+                <div class="step-item"><span class="step-num">1</span> Déposer le document</div>
+                <div class="step-item"><span class="step-num">2</span> Cadrer l'image</div>
+                <div class="step-item"><span class="step-num">3</span> Ajuster la clarté</div>
+                <div class="step-item"><span class="step-num">4</span> Gérer les pages</div>
+                <div class="step-item"><span class="step-num">5</span> Nommer et envoyer</div>
+            </div>
+
+            <button type="button" style="width: 100%; padding: 16px; font-size: 1.1rem;" onclick="goToStep(1)">Démarrer ➔</button>
+        </div>
+    </div>
+
     <!-- ================= VUE 1 : CHOIX SOURCE ================= -->
-    <div id="step-1" class="app-view active">
-        <div class="header"><h2>Optimisation des justificatifs</h2></div>
+    <div id="step-1" class="app-view">
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 1 sur 5 : Déposez votre document</div>
 
         <div class="panel" style="margin-top: auto; margin-bottom: auto;">
@@ -192,7 +270,7 @@
 
     <!-- ================= VUE 2 : RECADRAGE ================= -->
     <div id="step-2" class="app-view">
-        <div class="header"><h2>Optimisation des justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 2 sur 5 : Cadrez le document</div>
 
         <div id="source-alert-banner" class="alert-banner">
@@ -225,13 +303,13 @@
 
         <div class="nav-buttons">
             <button type="button" class="secondary" onclick="goToStep(1)">← Retour</button>
-            <button type="button" class="success" onclick="triggerWarp()">Continuer ➔</button>
+            <button type="button" onclick="triggerWarp()">Continuer ➔</button>
         </div>
     </div>
 
     <!-- ================= VUE 3 : CONTRASTE & ZOOM ================= -->
     <div id="step-3" class="app-view">
-        <div class="header"><h2>Optimisation des justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 3 sur 5 : Effacez les ombres</div>
 
         <div id="result-alert-banner" class="alert-banner"></div>
@@ -256,13 +334,13 @@
 
         <div class="nav-buttons">
             <button type="button" class="secondary" onclick="goToStep(2)">← Retour</button>
-            <button type="button" class="success" onclick="validateCurrentPage()">Continuer ➔</button>
+            <button type="button" onclick="validateCurrentPage()">Continuer ➔</button>
         </div>
     </div>
 
     <!-- ================= VUE 4 : GESTION MULTI-PAGES ================= -->
     <div id="step-4" class="app-view">
-        <div class="header"><h2>Optimisation des justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 4 sur 5 : Vos pages numérisées</div>
 
         <div class="panel">
@@ -271,41 +349,42 @@
             <div class="pages-list-container" id="pages-list"></div>
 
             <button type="button" style="background:#eef4fc; color:var(--primary); border:2px dashed var(--primary); box-shadow:none;" onclick="addAnotherPage()">
-                ➕ Ajouter une autre page au document
+                ➕ Ajouter une page supplémentaire
             </button>
         </div>
 
         <div class="nav-buttons">
-            <button type="button" class="success" style="width:100%;" onclick="goToStep(5)">Continuer vers l'envoi ➔</button>
+            <button type="button" style="width:100%;" onclick="goToStep(5)">Continuer vers l'envoi ➔</button>
         </div>
     </div>
 
     <!-- ================= VUE 5 : EXPORT & ENVOI ================= -->
     <div id="step-5" class="app-view">
-        <div class="header"><h2>Optimisation des justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 5 sur 5 : Finalisation</div>
 
         <div class="panel">
-            <p class="instruction">Indiquez les informations du document avant l'envoi.</p>
+            <p class="instruction" style="color:var(--primary);">Remplissez ces deux champs pour nommer automatiquement votre document avant l'envoi.</p>
             
             <div class="input-group">
                 <label for="doc-type">Nature du document</label>
-                <input type="text" id="doc-type" placeholder="ex: Arrêt de travail, Certificat...">
+                <input type="text" id="doc-type" placeholder="ex: Arrêt de travail, Certificat..." oninput="checkFormFields()">
             </div>
             <div class="input-group">
                 <label for="agent-name">Nom et Prénom de l'agent</label>
-                <input type="text" id="agent-name" placeholder="ex: DUPONT Jean">
+                <input type="text" id="agent-name" placeholder="ex: DUPONT Jean" oninput="checkFormFields()">
             </div>
 
             <div class="action-buttons-grid">
-                <button type="button" class="btn-export" onclick="exportPDF('download')">
+                <!-- Les boutons sont grisés (disabled) par défaut via le JS -->
+                <div class="btn-export disabled" id="btn-download" onclick="exportPDF('download')">
                     <img src="https://cdn-icons-png.flaticon.com/512/337/337946.png" alt="Télécharger PDF">
-                    Télécharger le PDF
-                </button>
-                <button type="button" class="btn-export" onclick="exportPDF('email')">
+                    <span>Télécharger le PDF</span>
+                </div>
+                <div class="btn-export disabled" id="btn-email" onclick="exportPDF('email')">
                     <img src="https://cdn-icons-png.flaticon.com/512/542/542689.png" alt="Email">
-                    Envoyer par e-mail
-                </button>
+                    <span>Envoyer par e-mail</span>
+                </div>
             </div>
         </div>
 
@@ -333,13 +412,12 @@
         const resultCanvas = document.getElementById('result-canvas');
         const rCtx = resultCanvas.getContext('2d', { willReadFrequently: true });
 
-        // Loupe
         const loupe = document.getElementById('loupe-canvas');
         const lCtx = loupe.getContext('2d');
         const LOUPE_SIZE = 110;
-        const ZOOM_MULT = 2; // Zoom de la loupe x2
+        const ZOOM_MULT = 2;
 
-        // --- NAVIGATION ---
+        // --- GESTION DES VUES ---
         function goToStep(stepIndex) {
             document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active'));
             document.getElementById(`step-${stepIndex}`).classList.add('active');
@@ -351,6 +429,19 @@
             if (stepIndex === 4) {
                 renderPagesList();
             }
+            if (stepIndex === 5) {
+                checkFormFields();
+            }
+        }
+
+        // --- GESTION POPUP & TOAST ---
+        function openModal() { document.getElementById('custom-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
+        
+        function showToast() {
+            const toast = document.getElementById('toast-message');
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
         }
 
         // --- ÉTAPE 1 : IMPORTATION ---
@@ -376,7 +467,7 @@
             reader.readAsDataURL(file);
         }
 
-        // --- CONTRÔLE QUALITÉ SOURCE ---
+        // --- CONTRÔLE QUALITÉ SOURCE (Discret) ---
         function analyzeSourceImage() {
             const checkCanvas = document.createElement('canvas');
             const maxDim = 500;
@@ -431,7 +522,7 @@
 
         // --- IA AUTO-CADRAGE ---
         function autoDetectFrame() {
-            if (!window.cvReady) { alert("L'intelligence artificielle n'est pas encore prête."); return; }
+            if (!window.cvReady) return;
 
             let src, gray, edges, M, contours, hierarchy, bestContour;
             try {
@@ -484,20 +575,15 @@
                 if (bestContour) {
                     let pts = [];
                     for (let i = 0; i < 4; i++) {
-                        pts.push({
-                            x: bestContour.data32S[i * 2] * scale,
-                            y: bestContour.data32S[i * 2 + 1] * scale
-                        });
+                        pts.push({ x: bestContour.data32S[i * 2] * scale, y: bestContour.data32S[i * 2 + 1] * scale });
                     }
-                    
                     pts.sort((a,b) => a.y - b.y);
                     let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
                     let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
                     corners = [top[0], top[1], bottom[0], bottom[1]];
-
                     drawSource();
                 } else {
-                    alert("Document non détecté automatiquement. Ajustez le cadre manuellement.");
+                    openModal();
                 }
             } catch (e) {
                 console.error(e);
@@ -538,13 +624,12 @@
             sCtx.moveTo(corners[0].x, corners[0].y);
             for (let i = 1; i < 4; i++) { sCtx.lineTo(corners[i].x, corners[i].y); }
             sCtx.closePath();
-            sCtx.fillStyle = 'rgba(0, 86, 179, 0.25)';
+            sCtx.fillStyle = 'rgba(0, 156, 224, 0.25)';
             sCtx.fill();
-            sCtx.strokeStyle = '#0056b3';
+            sCtx.strokeStyle = 'var(--primary)';
             sCtx.lineWidth = Math.max(3, sourceCanvas.width / 250);
             sCtx.stroke();
 
-            // Arêtes (Poignées Plates "Pilules")
             const edgeLength = Math.max(80, sourceCanvas.width / 10);
             const edgeThick = Math.max(16, sourceCanvas.width / 60);
 
@@ -569,27 +654,24 @@
                 sCtx.lineTo(ex, ey + er); sCtx.arcTo(ex, ey, ex + er, ey, er);
                 sCtx.closePath();
 
-                sCtx.fillStyle = '#0056b3'; sCtx.fill();
+                sCtx.fillStyle = 'var(--primary)'; sCtx.fill();
                 sCtx.strokeStyle = '#ffffff'; sCtx.lineWidth = edgeThick / 3; sCtx.stroke();
                 sCtx.restore();
             }
 
-            // Coins (Gros ronds + point central)
             const radius = Math.max(26, sourceCanvas.width / 35);
             corners.forEach((pt) => {
                 sCtx.beginPath(); sCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
                 sCtx.fillStyle = '#ffffff'; sCtx.fill();
-                sCtx.strokeStyle = '#0056b3'; sCtx.lineWidth = radius / 4; sCtx.stroke();
+                sCtx.strokeStyle = 'var(--primary)'; sCtx.lineWidth = radius / 4; sCtx.stroke();
 
                 sCtx.beginPath(); sCtx.arc(pt.x, pt.y, radius / 4, 0, Math.PI * 2);
-                sCtx.fillStyle = '#0056b3'; sCtx.fill();
+                sCtx.fillStyle = 'var(--primary)'; sCtx.fill();
             });
         }
 
-        // LOUPE DYNAMIQUE
         function updateLoupe(pos) {
             loupe.style.display = 'block';
-            
             const rect = sourceCanvas.getBoundingClientRect();
             const scaleX = rect.width / sourceCanvas.width;
             const scaleY = rect.height / sourceCanvas.height;
@@ -617,7 +699,6 @@
 
             const srcSizeX = (LOUPE_SIZE / scaleX) / ZOOM_MULT;
             const srcSizeY = (LOUPE_SIZE / scaleY) / ZOOM_MULT;
-            
             const sx = pos.x - srcSizeX / 2;
             const sy = pos.y - srcSizeY / 2;
 
@@ -627,7 +708,7 @@
             lCtx.beginPath();
             lCtx.moveTo(LOUPE_SIZE / 2 - 12, LOUPE_SIZE / 2); lCtx.lineTo(LOUPE_SIZE / 2 + 12, LOUPE_SIZE / 2);
             lCtx.moveTo(LOUPE_SIZE / 2, LOUPE_SIZE / 2 - 12); lCtx.lineTo(LOUPE_SIZE / 2, LOUPE_SIZE / 2 + 12);
-            lCtx.strokeStyle = '#0056b3'; lCtx.lineWidth = 2.5; lCtx.stroke();
+            lCtx.strokeStyle = 'var(--primary)'; lCtx.lineWidth = 2.5; lCtx.stroke();
         }
 
         function getCanvasCoords(e) {
@@ -694,16 +775,11 @@
             loupe.style.display = 'none';
         }
 
-        sourceCanvas.addEventListener('mousedown', handleStart);
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleEnd);
-        sourceCanvas.addEventListener('touchstart', handleStart, { passive: false });
-        window.addEventListener('touchmove', handleMove, { passive: false });
-        window.addEventListener('touchend', handleEnd);
+        sourceCanvas.addEventListener('mousedown', handleStart); window.addEventListener('mousemove', handleMove); window.addEventListener('mouseup', handleEnd);
+        sourceCanvas.addEventListener('touchstart', handleStart, { passive: false }); window.addEventListener('touchmove', handleMove, { passive: false }); window.addEventListener('touchend', handleEnd);
 
         function rotateSource(degrees) {
-            const tempCanvas = document.createElement('canvas');
-            const tCtx = tempCanvas.getContext('2d');
+            const tempCanvas = document.createElement('canvas'); const tCtx = tempCanvas.getContext('2d');
             if (Math.abs(degrees) === 90) { tempCanvas.width = rawImage.height; tempCanvas.height = rawImage.width; } 
             else { tempCanvas.width = rawImage.width; tempCanvas.height = rawImage.height; }
 
@@ -731,9 +807,7 @@
             unbinarizedCanvas.width = targetW; unbinarizedCanvas.height = targetH;
             resultCanvas.width = targetW; resultCanvas.height = targetH;
             
-            currentZoom = 100;
-            resultCanvas.style.width = '100%';
-            document.getElementById('zoom-value').textContent = '100%';
+            currentZoom = 100; resultCanvas.style.width = '100%'; document.getElementById('zoom-value').textContent = '100%';
 
             const cleanCanvas = document.createElement('canvas');
             cleanCanvas.width = sourceCanvas.width; cleanCanvas.height = sourceCanvas.height;
@@ -787,10 +861,10 @@
             const alertBanner = document.getElementById('result-alert-banner');
             
             if (inkPercentage < 2) {
-                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> Image trop claire, le texte peut disparaître.";
+                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop claire. Le texte risque d'être effacé.";
                 alertBanner.style.display = 'block';
             } else if (inkPercentage > 15) {
-                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> Image trop sombre. Glissez le curseur vers la droite.";
+                alertBanner.innerHTML = "⚠️ <strong>Attention :</strong> L'image est trop sombre. Glissez le curseur vers la droite.";
                 alertBanner.style.display = 'block';
             } else {
                 alertBanner.style.display = 'none';
@@ -813,21 +887,9 @@
             goToStep(4);
         }
 
-        function addPageAndScanAnother() {
-            if (!resultCanvas.width) return;
-            pdfPageQueue.push({
-                dataUrl: resultCanvas.toDataURL('image/jpeg', 0.95),
-                width: resultCanvas.width,
-                height: resultCanvas.height
-            });
-            addAnotherPage();
-        }
-
         function addAnotherPage() {
             rawImage = new Image();
             inputCamera.value = ''; inputGallery.value = '';
-            document.getElementById('source-alert-banner').style.display = 'none';
-            document.getElementById('result-alert-banner').style.display = 'none';
             goToStep(1);
         }
 
@@ -863,7 +925,7 @@
                 item.className = 'page-card';
                 item.innerHTML = `
                     <img class="page-card-thumb" src="${page.dataUrl}">
-                    <div class="page-card-title">Page ${idx + 1}</div>
+                    <div class="page-card-title">Page n°${idx + 1}</div>
                     <div class="page-card-actions">
                         <button type="button" class="btn-move" onclick="movePageUp(${idx})" ${idx === 0 ? 'disabled style="opacity:0.3;"' : ''}>⬆️</button>
                         <button type="button" class="btn-move" onclick="movePageDown(${idx})" ${idx === pdfPageQueue.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>⬇️</button>
@@ -875,8 +937,23 @@
         }
 
         // --- ÉTAPE 5 : EXPORT ---
+        function checkFormFields() {
+            const docType = document.getElementById('doc-type').value.trim();
+            const agentName = document.getElementById('agent-name').value.trim();
+            const btnDownload = document.getElementById('btn-download');
+            const btnEmail = document.getElementById('btn-email');
+
+            if (docType !== "" && agentName !== "") {
+                btnDownload.classList.remove('disabled');
+                btnEmail.classList.remove('disabled');
+            } else {
+                btnDownload.classList.add('disabled');
+                btnEmail.classList.add('disabled');
+            }
+        }
+
         async function exportPDF(mode = 'download') {
-            if (pdfPageQueue.length === 0) { alert("Aucun document prêt."); return; }
+            if (pdfPageQueue.length === 0) return;
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -909,25 +986,30 @@
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
                         await navigator.share({
-                            title: `${docTypeVal} - ${agentNameVal}`,
+                            title: `${docTypeVal} ${agentNameVal}`,
                             text: `Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`,
                             files: [file]
                         });
+                        showToast();
                         resetAppComplete();
                         return;
                     } catch (err) { console.log("Partage annulé"); }
                 }
 
                 pdf.save(fileName);
-                const subject = encodeURIComponent(`${docTypeVal} - ${agentNameVal}`);
+                showToast();
+                
+                const subject = encodeURIComponent(`${docTypeVal} ${agentNameVal}`);
                 const body = encodeURIComponent(`Bonjour,\n\nJe vous transmets le document : ${docTypeVal}.\n\nCordialement,`);
                 setTimeout(() => { window.location.href = `mailto:?subject=${subject}&body=${body}`; }, 500);
 
             } else {
                 pdf.save(fileName);
+                showToast();
             }
 
-            resetAppComplete();
+            // Reset after delay to let the download start
+            setTimeout(() => { resetAppComplete(); }, 1500);
         }
 
         function resetAppComplete() {
@@ -935,8 +1017,12 @@
             document.getElementById('doc-type').value = "";
             document.getElementById('agent-name').value = "";
             rawImage = new Image();
-            goToStep(1);
+            checkFormFields();
+            goToStep(0); // Retour à la page de bienvenue
         }
+
+        // Initialisation de la vue
+        goToStep(0);
 
         // PWA Registration
         if ('serviceWorker' in navigator) {
