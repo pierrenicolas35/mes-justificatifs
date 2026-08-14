@@ -17,7 +17,7 @@
     <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- OpenCV (Moteur IA) -->
+    <!-- OpenCV (Moteur IA) avec détection d'erreur -->
     <script>
         window.cvReady = false;
         var Module = {
@@ -30,8 +30,15 @@
                 }
             }
         };
+        
+        function onOpenCvError() {
+            const btn = document.getElementById('btn-auto-crop');
+            if (btn) {
+                btn.innerHTML = "⚠️ Erreur réseau (IA bloquée)";
+            }
+        }
     </script>
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onerror="onOpenCvError()"></script>
 
     <style>
         :root {
@@ -104,10 +111,10 @@
             box-shadow: 0 3px 8px rgba(0,156,224,0.3); transition: transform 0.1s;
         }
         button:active { transform: scale(0.97); }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
         
+        /* Bouton IA compact */
         button.magic { 
             background-color: #ffffff; 
             color: var(--primary); 
@@ -121,6 +128,16 @@
             flex: 0 0 auto;
             margin-bottom: 12px;
             box-shadow: 0 3px 6px rgba(0,156,224,0.15);
+        }
+
+        /* FEEDBACK VISUEL : Bouton IA grisé quand inactif */
+        button.magic:disabled {
+            background-color: #f1f3f5;
+            color: #adb5bd;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 1;
         }
         
         .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
@@ -305,6 +322,7 @@
 
         <p class="instruction" style="margin-bottom: 8px;">Ajustez le cadre bleu sur les bords de la feuille.</p>
 
+        <!-- Bouton IA avec désactivation visuelle claire -->
         <button type="button" id="btn-auto-crop" class="magic" onclick="autoDetectFrame()" disabled>
             ⏳ Chargement de l'IA...
         </button>
@@ -481,7 +499,7 @@
             setTimeout(() => { toast.classList.remove('show'); }, 3500);
         }
 
-        // --- ÉTAPE 1 : IMPORTATION ---
+        // --- ÉTAPE 1 : IMPORTATION & COMPRESSION ---
         function triggerInput(type) {
             if (type === 'camera') { inputCamera.value = ''; inputCamera.click(); }
             else { inputGallery.value = ''; inputGallery.click(); }
@@ -496,7 +514,7 @@
             reader.onload = (e) => {
                 const tempImg = new Image();
                 tempImg.onload = () => {
-                    const maxDim = 1600; // Optimization
+                    const maxDim = 1600; 
                     let w = tempImg.width;
                     let h = tempImg.height;
                     
@@ -581,7 +599,7 @@
             }
         }
 
-        // --- IA AUTO-CADRAGE (Original qui fonctionne) ---
+        // --- IA AUTO-CADRAGE (Votre code d'origine 100% fiable) ---
         function autoDetectFrame() {
             if (!window.cvReady) return;
 
@@ -648,6 +666,7 @@
                 }
             } catch (e) {
                 console.error(e);
+                alert("Erreur de calcul : " + e.message); // Aide au diagnostic si le crash persiste
             } finally {
                 if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete(); if (M) M.delete();
                 if (contours) contours.delete(); if (hierarchy) hierarchy.delete();
@@ -905,7 +924,6 @@
             goToStep(3);
         }
 
-        // --- BASCULE IA / MANUEL ---
         function setEnhanceMode(mode) {
             currentEnhanceMode = mode;
             const btnAuto = document.getElementById('btn-mode-auto');
@@ -925,7 +943,6 @@
             }
         }
 
-        // --- FILTRE IA (Seuil Adaptatif Local) ---
         function applyAutoEnhanceIA() {
             if (!unbinarizedCanvas.width) return;
 
@@ -939,7 +956,6 @@
                     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
                     cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
 
-                    // Seuil adaptatif : efface les ombres locales
                     cv.adaptiveThreshold(
                         gray, 
                         binary, 
@@ -961,7 +977,7 @@
                     if (binary) binary.delete();
                 }
             }
-            
+
             applyBinarizationManual(130);
         }
 
