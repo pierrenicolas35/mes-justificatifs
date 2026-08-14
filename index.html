@@ -107,7 +107,22 @@
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         button.secondary { background-color: #6c757d; box-shadow: 0 3px 8px rgba(108,117,125,0.2); }
         button.success { background-color: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
-        button.magic { background-color: #ffffff; color: var(--primary); border: 2px solid var(--primary); box-shadow: none; width: 100%; margin-bottom: 10px; }
+        
+        /* Correction : Bouton IA sous forme de pilule compacte */
+        button.magic { 
+            background-color: #ffffff; 
+            color: var(--primary); 
+            border: 2px solid var(--primary); 
+            border-radius: 30px;
+            padding: 8px 20px;
+            width: auto;
+            align-self: center;
+            font-size: 0.85rem;
+            min-height: auto;
+            flex: 0 0 auto;
+            margin-bottom: 12px;
+            box-shadow: 0 3px 6px rgba(0,156,224,0.15);
+        }
         
         .nav-buttons { display: flex; gap: 10px; width: 100%; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
 
@@ -279,7 +294,7 @@
 
         <p class="instruction" style="margin-bottom: 8px;">Ajustez le cadre bleu sur les bords de la feuille.</p>
 
-        <!-- Bouton IA -->
+        <!-- Bouton IA optimisé en taille et style -->
         <button type="button" id="btn-auto-crop" class="magic" onclick="autoDetectFrame()" disabled>
             ⏳ Chargement de l'IA...
         </button>
@@ -376,6 +391,7 @@
             </div>
 
             <div class="action-buttons-grid">
+                <!-- Boutons grisés par défaut -->
                 <div class="btn-export disabled" id="btn-download" onclick="exportPDF('download')">
                     <img src="https://cdn-icons-png.flaticon.com/512/337/337946.png" alt="Télécharger PDF">
                     <span>Télécharger le PDF</span>
