@@ -64,12 +64,11 @@
         /* --- ÉCRAN D'ACCUEIL (BIENVENUE) --- */
         .welcome-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: white; border-radius: 16px; padding: 30px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            background: white; border-radius: 16px; padding: 35px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             margin: auto 0; text-align: center; border: 2px solid var(--border);
         }
-        .welcome-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 20px; }
-        .welcome-title { font-size: 1.6rem; font-weight: 800; color: var(--primary); margin: 0 0 10px 0; }
-        .welcome-desc { font-size: 0.95rem; font-weight: 600; color: var(--text-muted); line-height: 1.5; margin-bottom: 25px; }
+        .welcome-title { font-size: 2.2rem; font-weight: 900; color: var(--primary); margin: 0 0 15px 0; line-height: 1.2; }
+        .welcome-desc { font-size: 0.95rem; font-weight: 600; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
         
         .steps-list { width: 100%; text-align: left; margin-bottom: 30px; display: flex; flex-direction: column; gap: 12px; }
         .step-item { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 0.95rem; color: #2c3e50; }
@@ -227,11 +226,12 @@
     <!-- ================= VUE 0 : ACCUEIL BIENVENUE ================= -->
     <div id="step-0" class="app-view active">
         <div class="welcome-container">
-            <img src="1786685764841.jpg" alt="Logo CHU" class="welcome-logo">
             <h1 class="welcome-title">Mes justificatifs</h1>
             <p class="welcome-desc">
                 Cette application est faite pour améliorer la qualité des documents pris en photo et transmis à votre employeur, afin de faciliter leur traitement.
             </p>
+            
+            <p style="font-weight: 800; color: var(--primary); margin-bottom: 20px; font-size: 1.1rem;">C'est simple, rapide, et en seulement 5 étapes :</p>
             
             <div class="steps-list">
                 <div class="step-item"><span class="step-num">1</span> Déposer le document</div>
@@ -376,7 +376,6 @@
             </div>
 
             <div class="action-buttons-grid">
-                <!-- Les boutons sont grisés (disabled) par défaut via le JS -->
                 <div class="btn-export disabled" id="btn-download" onclick="exportPDF('download')">
                     <img src="https://cdn-icons-png.flaticon.com/512/337/337946.png" alt="Télécharger PDF">
                     <span>Télécharger le PDF</span>
