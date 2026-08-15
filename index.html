@@ -450,6 +450,10 @@
             { cannyLow: 20, cannyHigh: 90, delayMs: 120 },
             { cannyLow: 45, cannyHigh: 140, delayMs: 250 }
         ];
+        const AUTO_CROP_MIN_AREA_RATIO = 0.006;
+        const AUTO_CROP_MIN_EDGE_PX = 14;
+        const AUTO_CROP_HEURISTIC_EDGE_THRESHOLD = 55;
+        const AUTO_CROP_HEURISTIC_MIN_HIT_RATIO = 0.01;
 
         function wait(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -551,6 +555,10 @@
             if (!file.type.startsWith('image/')) return;
             try {
                 hideAutoCropBanner();
+                logAutoCrop('info', 'IMAGE_LOAD_START', {
+                    mimeType: file.type || 'unknown',
+                    sizeBytes: file.size || 0
+                });
                 const maxDim = 1600;
                 const compressCanvas = document.createElement('canvas');
                 const cCtx = compressCanvas.getContext('2d');
@@ -572,7 +580,12 @@
                     compressCanvas.height = h;
                     cCtx.drawImage(normalizedBitmap, 0, 0, w, h);
                     normalizedBitmap.close();
+                    logAutoCrop('info', 'IMAGE_EXIF_NORMALIZED', { width: w, height: h });
                 } else {
+                    logAutoCrop('warn', 'W_EXIF_NORMALIZATION_UNAVAILABLE', {
+                        reason: 'orientation_mismatch',
+                        mimeType: file.type || 'unknown'
+                    });
                     const reader = new FileReader();
                     const imageDataUrl = await new Promise((resolve, reject) => {
                         reader.onload = (e) => resolve(e.target.result);
@@ -694,25 +707,179 @@
             return Math.abs(area / 2);
         }
 
+        function asNumericPoint(pt) {
+            if (!pt) return null;
+            if (Array.isArray(pt) && pt.length >= 2) {
+                const x = Number(pt[0]);
+                const y = Number(pt[1]);
+                if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
+                return null;
+            }
+            const x = Number(pt.x ?? pt.left ?? pt.X);
+            const y = Number(pt.y ?? pt.top ?? pt.Y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+            return { x, y };
+        }
+
+        function toRectCorners(minX, minY, maxX, maxY) {
+            return [
+                { x: minX, y: minY },
+                { x: maxX, y: minY },
+                { x: maxX, y: maxY },
+                { x: minX, y: maxY }
+            ];
+        }
+
+        function detectNormalizedCoordinates(points) {
+            const maxAbs = points.reduce((m, pt) => Math.max(m, Math.abs(pt.x), Math.abs(pt.y)), 0);
+            const minVal = points.reduce((m, pt) => Math.min(m, pt.x, pt.y), Number.POSITIVE_INFINITY);
+            return maxAbs <= 1.5 && minVal >= -0.25;
+        }
+
+        function repairPartialCorners(points, imgW, imgH) {
+            const valid = points.filter(Boolean);
+            if (valid.length === 0) {
+                return { points: null, wasRepaired: false };
+            }
+            if (valid.length === 4) {
+                return { points: valid, wasRepaired: false };
+            }
+            let minX = valid.reduce((m, pt) => Math.min(m, pt.x), Number.POSITIVE_INFINITY);
+            let minY = valid.reduce((m, pt) => Math.min(m, pt.y), Number.POSITIVE_INFINITY);
+            let maxX = valid.reduce((m, pt) => Math.max(m, pt.x), Number.NEGATIVE_INFINITY);
+            let maxY = valid.reduce((m, pt) => Math.max(m, pt.y), Number.NEGATIVE_INFINITY);
+            const minEdge = Math.max(AUTO_CROP_MIN_EDGE_PX, Math.min(imgW, imgH) * 0.05);
+            if ((maxX - minX) < minEdge) {
+                const centerX = (minX + maxX) / 2;
+                minX = centerX - minEdge / 2;
+                maxX = centerX + minEdge / 2;
+            }
+            if ((maxY - minY) < minEdge) {
+                const centerY = (minY + maxY) / 2;
+                minY = centerY - minEdge / 2;
+                maxY = centerY + minEdge / 2;
+            }
+            return { points: toRectCorners(minX, minY, maxX, maxY), wasRepaired: true };
+        }
+
         // Contrat auto-crop IA:
-        // Entrée: 4 points ({x,y}) potentiellement bruités/hors limites.
-        // Sortie: 4 points ordonnés TL/TR/BR/BL, bornés à l'image, ou null si invalide.
-        function normalizeAndValidateCorners(points, imgW, imgH) {
-            if (!Array.isArray(points) || points.length !== 4) return null;
-            const normalized = points.map((pt) => {
-                const x = Number(pt?.x);
-                const y = Number(pt?.y);
-                if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-                return { x: clamp(x, 0, imgW), y: clamp(y, 0, imgH) };
+        // Entrée: points potentiellement bruités, partiels, en pixels ou normalisés [0..1].
+        // Sortie: { corners, reason, details } avec corners ordonnés TL/TR/BR/BL si valide.
+        function normalizeAndValidateCorners(points, imgW, imgH, options = {}) {
+            const minAreaRatio = options.minAreaRatio ?? AUTO_CROP_MIN_AREA_RATIO;
+            const minEdgePx = options.minEdgePx ?? AUTO_CROP_MIN_EDGE_PX;
+            if (!Array.isArray(points) || points.length === 0) {
+                return { corners: null, reason: 'invalid_coords', details: { pointsCount: Array.isArray(points) ? points.length : 0 } };
+            }
+            const preparedPoints = points.length >= 4 ? points.slice(0, 4) : [...points, ...Array(4 - points.length).fill(null)];
+            const parsed = preparedPoints.map(asNumericPoint);
+            const validCount = parsed.filter(Boolean).length;
+            if (validCount === 0) {
+                return { corners: null, reason: 'invalid_coords', details: { validCount } };
+            }
+
+            const validParsed = parsed.filter(Boolean);
+            const isNormalized = detectNormalizedCoordinates(validParsed);
+            const scaled = parsed.map((pt) => {
+                if (!pt) return null;
+                if (isNormalized) {
+                    return { x: pt.x * imgW, y: pt.y * imgH };
+                }
+                return { x: pt.x, y: pt.y };
             });
-            if (normalized.some(pt => !pt)) return null;
-            const ordered = orderCorners(normalized);
-            const minArea = (imgW * imgH) * 0.01;
-            if (polygonArea(ordered) < minArea) return null;
+
+            const repaired = repairPartialCorners(scaled, imgW, imgH);
+            if (!repaired.points) {
+                return { corners: null, reason: 'invalid_coords', details: { validCount } };
+            }
+
+            let outOfBoundsCount = 0;
+            const clamped = repaired.points.map((pt) => {
+                const clampedX = clamp(pt.x, 0, imgW);
+                const clampedY = clamp(pt.y, 0, imgH);
+                if (clampedX !== pt.x || clampedY !== pt.y) outOfBoundsCount++;
+                return { x: clampedX, y: clampedY };
+            });
+            const ordered = orderCorners(clamped);
+            const area = polygonArea(ordered);
+            const areaRatio = area / (imgW * imgH);
+            if (!Number.isFinite(areaRatio) || areaRatio < minAreaRatio) {
+                return { corners: null, reason: 'low_confidence', details: { areaRatio, minAreaRatio, outOfBoundsCount, repaired: repaired.wasRepaired, normalizedInput: isNormalized } };
+            }
             const topW = Math.hypot(ordered[1].x - ordered[0].x, ordered[1].y - ordered[0].y);
             const rightH = Math.hypot(ordered[2].x - ordered[1].x, ordered[2].y - ordered[1].y);
-            if (topW < 20 || rightH < 20) return null;
-            return ordered;
+            if (topW < minEdgePx || rightH < minEdgePx) {
+                return { corners: null, reason: 'low_confidence', details: { topW, rightH, minEdgePx, outOfBoundsCount, repaired: repaired.wasRepaired, normalizedInput: isNormalized } };
+            }
+            return {
+                corners: ordered,
+                reason: outOfBoundsCount > 0 ? 'out_of_bounds' : 'ok',
+                details: { outOfBoundsCount, repaired: repaired.wasRepaired, normalizedInput: isNormalized, areaRatio }
+            };
+        }
+
+        function getHeuristicDocumentFallback() {
+            const srcW = sourceCanvas.width;
+            const srcH = sourceCanvas.height;
+            if (!srcW || !srcH) return null;
+            const maxDim = 280;
+            const scale = Math.max(srcW / maxDim, srcH / maxDim, 1);
+            const w = Math.max(40, Math.round(srcW / scale));
+            const h = Math.max(40, Math.round(srcH / scale));
+            if (w < 3 || h < 3) return null;
+            const probeCanvas = document.createElement('canvas');
+            probeCanvas.width = w;
+            probeCanvas.height = h;
+            const pCtx = probeCanvas.getContext('2d', { willReadFrequently: true });
+            pCtx.drawImage(sourceCanvas, 0, 0, w, h);
+            const data = pCtx.getImageData(0, 0, w, h).data;
+            const lum = (idx) => (0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
+
+            let minX = w;
+            let minY = h;
+            let maxX = 0;
+            let maxY = 0;
+            let hits = 0;
+            const interiorPixelCount = (w - 2) * (h - 2);
+
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const i = (y * w + x) * 4;
+                    const idxL = i - 4;
+                    const idxR = i + 4;
+                    const idxU = i - w * 4;
+                    const idxD = i + w * 4;
+                    const gx = Math.abs(lum(idxR) - lum(idxL));
+                    const gy = Math.abs(lum(idxD) - lum(idxU));
+                    const mag = gx + gy;
+                    if (mag > AUTO_CROP_HEURISTIC_EDGE_THRESHOLD) {
+                        hits++;
+                        if (x < minX) minX = x;
+                        if (y < minY) minY = y;
+                        if (x > maxX) maxX = x;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+
+            if (hits < (interiorPixelCount * AUTO_CROP_HEURISTIC_MIN_HIT_RATIO)) return null;
+            if (maxX <= minX || maxY <= minY) return null;
+            const padX = Math.round((maxX - minX) * 0.08);
+            const padY = Math.round((maxY - minY) * 0.08);
+            const clampedMinX = clamp(minX - padX, 0, w);
+            const clampedMinY = clamp(minY - padY, 0, h);
+            const clampedMaxX = clamp(maxX + padX, 0, w);
+            const clampedMaxY = clamp(maxY + padY, 0, h);
+            const rawBox = toRectCorners(clampedMinX, clampedMinY, clampedMaxX, clampedMaxY).map((pt) => ({
+                x: pt.x * scale,
+                y: pt.y * scale
+            }));
+            const normalized = normalizeAndValidateCorners(rawBox, srcW, srcH, { minAreaRatio: 0.004, minEdgePx: 12 });
+            if (!normalized.corners) {
+                logAutoCrop('warn', 'E_HEURISTIC_INVALID_BOX', { reason: normalized.reason, ...normalized.details });
+                return null;
+            }
+            return normalized.corners;
         }
 
         function applyAutoCropFallback(errorCode, userMessage, details = {}) {
@@ -727,16 +894,16 @@
             let src, gray, edges, contours, hierarchy, bestContour;
             try {
                 const maxDim = 500;
-                let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
+                let scale = Math.max(sourceCanvas.width / maxDim, sourceCanvas.height / maxDim);
                 if (scale < 1) scale = 1;
-                const rw = Math.round(rawImage.width / scale);
-                const rh = Math.round(rawImage.height / scale);
+                const rw = Math.round(sourceCanvas.width / scale);
+                const rh = Math.round(sourceCanvas.height / scale);
 
                 const tmpCanvas = document.createElement('canvas');
                 tmpCanvas.width = rw;
                 tmpCanvas.height = rh;
                 const tmpCtx = tmpCanvas.getContext('2d');
-                tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
+                tmpCtx.drawImage(sourceCanvas, 0, 0, rw, rh);
 
                 src = cv.imread(tmpCanvas);
                 gray = new cv.Mat();
@@ -777,7 +944,18 @@
                         y: bestContour.data32S[i * 2 + 1] * scale
                     });
                 }
-                return normalizeAndValidateCorners(points, sourceCanvas.width, sourceCanvas.height);
+                const normalized = normalizeAndValidateCorners(points, sourceCanvas.width, sourceCanvas.height);
+                if (!normalized.corners) {
+                    logAutoCrop('warn', 'E_BBOX_REJECT', { reason: normalized.reason, ...normalized.details });
+                    return null;
+                }
+                if (normalized.reason === 'out_of_bounds') {
+                    logAutoCrop('warn', 'W_BBOX_CLAMPED', normalized.details);
+                }
+                if (normalized.details?.repaired) {
+                    logAutoCrop('info', 'I_BBOX_REPAIRED', normalized.details);
+                }
+                return normalized.corners;
             } finally {
                 if (src) src.delete();
                 if (gray) gray.delete();
@@ -806,6 +984,17 @@
                     return;
                 }
 
+                if (rawImage.width !== sourceCanvas.width || rawImage.height !== sourceCanvas.height) {
+                    // Détection et projection utilisent sourceCanvas : même référentiel que le rendu/drag utilisateur.
+                    logAutoCrop('warn', 'W_ORIENTATION_MISMATCH', {
+                        rawWidth: rawImage.width,
+                        rawHeight: rawImage.height,
+                        canvasWidth: sourceCanvas.width,
+                        canvasHeight: sourceCanvas.height,
+                        reason: 'orientation_mismatch'
+                    });
+                }
+
                 let detectedCorners = null;
                 let lastError = null;
 
@@ -827,6 +1016,18 @@
                 }
 
                 if (!detectedCorners) {
+                    const heuristicCorners = getHeuristicDocumentFallback();
+                    if (heuristicCorners) {
+                        corners = heuristicCorners;
+                        autoCropStatus = 'heuristic';
+                        setAutoCropBanner("ℹ️ Cadrage automatique ajusté avec estimation robuste. Vérifiez le cadre puis ajustez si besoin.", 'info');
+                        requestAnimationFrame(drawSource);
+                        logAutoCrop('info', 'AUTO_CROP_HEURISTIC_FALLBACK', {
+                            width: sourceCanvas.width,
+                            height: sourceCanvas.height
+                        });
+                        return;
+                    }
                     applyAutoCropFallback(
                         lastError ? 'E_AUTO_CROP_RUNTIME' : 'E_AUTO_CROP_NO_VALID_BOX',
                         "ℹ️ Le cadrage automatique n'a pas trouvé de zone fiable. Un cadre centré a été appliqué, vous pouvez l'ajuster.",
