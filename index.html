@@ -768,10 +768,11 @@
         function normalizeAndValidateCorners(points, imgW, imgH, options = {}) {
             const minAreaRatio = options.minAreaRatio ?? AUTO_CROP_MIN_AREA_RATIO;
             const minEdgePx = options.minEdgePx ?? AUTO_CROP_MIN_EDGE_PX;
-            if (!Array.isArray(points) || points.length !== 4) {
+            if (!Array.isArray(points) || points.length === 0) {
                 return { corners: null, reason: 'invalid_coords', details: { pointsCount: Array.isArray(points) ? points.length : 0 } };
             }
-            const parsed = points.map(asNumericPoint);
+            const preparedPoints = points.length >= 4 ? points.slice(0, 4) : [...points, ...Array(4 - points.length).fill(null)];
+            const parsed = preparedPoints.map(asNumericPoint);
             const validCount = parsed.filter(Boolean).length;
             if (validCount === 0) {
                 return { corners: null, reason: 'invalid_coords', details: { validCount } };
@@ -825,18 +826,21 @@
             const scale = Math.max(srcW / maxDim, srcH / maxDim, 1);
             const w = Math.max(40, Math.round(srcW / scale));
             const h = Math.max(40, Math.round(srcH / scale));
+            if (w < 3 || h < 3) return null;
             const probeCanvas = document.createElement('canvas');
             probeCanvas.width = w;
             probeCanvas.height = h;
             const pCtx = probeCanvas.getContext('2d', { willReadFrequently: true });
             pCtx.drawImage(sourceCanvas, 0, 0, w, h);
             const data = pCtx.getImageData(0, 0, w, h).data;
+            const lum = (idx) => (0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
 
             let minX = w;
             let minY = h;
             let maxX = 0;
             let maxY = 0;
             let hits = 0;
+            const interiorPixelCount = (w - 2) * (h - 2);
 
             for (let y = 1; y < h - 1; y++) {
                 for (let x = 1; x < w - 1; x++) {
@@ -845,7 +849,6 @@
                     const idxR = i + 4;
                     const idxU = i - w * 4;
                     const idxD = i + w * 4;
-                    const lum = (idx) => (0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
                     const gx = Math.abs(lum(idxR) - lum(idxL));
                     const gy = Math.abs(lum(idxD) - lum(idxU));
                     const mag = gx + gy;
@@ -859,11 +862,15 @@
                 }
             }
 
-            if (hits < (w * h * AUTO_CROP_HEURISTIC_MIN_HIT_RATIO)) return null;
+            if (hits < (interiorPixelCount * AUTO_CROP_HEURISTIC_MIN_HIT_RATIO)) return null;
             if (maxX <= minX || maxY <= minY) return null;
             const padX = Math.round((maxX - minX) * 0.08);
             const padY = Math.round((maxY - minY) * 0.08);
-            const rawBox = toRectCorners(minX - padX, minY - padY, maxX + padX, maxY + padY).map((pt) => ({
+            const clampedMinX = clamp(minX - padX, 0, w);
+            const clampedMinY = clamp(minY - padY, 0, h);
+            const clampedMaxX = clamp(maxX + padX, 0, w);
+            const clampedMaxY = clamp(maxY + padY, 0, h);
+            const rawBox = toRectCorners(clampedMinX, clampedMinY, clampedMaxX, clampedMaxY).map((pt) => ({
                 x: pt.x * scale,
                 y: pt.y * scale
             }));
@@ -978,6 +985,7 @@
                 }
 
                 if (rawImage.width !== sourceCanvas.width || rawImage.height !== sourceCanvas.height) {
+                    // Détection et projection utilisent sourceCanvas : même référentiel que le rendu/drag utilisateur.
                     logAutoCrop('warn', 'W_ORIENTATION_MISMATCH', {
                         rawWidth: rawImage.width,
                         rawHeight: rawImage.height,
@@ -1011,7 +1019,7 @@
                     const heuristicCorners = getHeuristicDocumentFallback();
                     if (heuristicCorners) {
                         corners = heuristicCorners;
-                        autoCropStatus = 'success';
+                        autoCropStatus = 'heuristic';
                         setAutoCropBanner("ℹ️ Cadrage automatique ajusté avec estimation robuste. Vérifiez le cadre puis ajustez si besoin.", 'info');
                         requestAnimationFrame(drawSource);
                         logAutoCrop('info', 'AUTO_CROP_HEURISTIC_FALLBACK', {
