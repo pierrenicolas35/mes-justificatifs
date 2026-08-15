@@ -23,10 +23,8 @@
         var Module = {
             onRuntimeInitialized: function() {
                 window.cvReady = true;
-                const btn = document.getElementById('btn-auto-crop');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = "🪄 Cadrage Automatique";
+                if (typeof window.updateAutoCropButtonState === 'function') {
+                    window.updateAutoCropButtonState();
                 }
             }
         };
@@ -170,6 +168,12 @@
             font-size: 0.9rem; font-weight: 700; line-height: 1.4;
             background-color: #ffeef0; color: #d62828; border: 1px solid #ffc2c2; text-align: center;
         }
+        .alert-banner.info {
+            background-color: #eef7ff; color: #005a8d; border-color: #b8def8;
+        }
+        .alert-banner.success {
+            background-color: #eaf9ef; color: #1f7a3b; border-color: #bfe8cc;
+        }
 
         /* --- TOAST --- */
         .toast-notification {
@@ -293,6 +297,7 @@
         <button type="button" id="btn-auto-crop" class="magic" onclick="autoDetectFrame()" disabled>
             ⏳ Chargement de l'IA...
         </button>
+        <div id="auto-crop-banner" class="alert-banner" style="margin-top: 10px;"></div>
 
         <div class="fullscreen-crop-wrapper">
             <canvas id="source-canvas"></canvas>
@@ -421,6 +426,8 @@
         let dragStartPos = null; let dragStartCorners = null;
         let currentZoom = 100;
         let isDrawing = false;
+        let isAutoCropRunning = false;
+        let autoCropStatus = 'idle';
         let currentEnhanceMode = 'auto';
 
         let unbinarizedCanvas = document.createElement('canvas');
@@ -438,6 +445,72 @@
         const lCtx = loupe.getContext('2d');
         const LOUPE_SIZE = 110;
         const ZOOM_MULT = 2;
+        const AUTO_CROP_RETRY_DELAYS_MS = [0, 120, 250];
+        const AUTO_CROP_MAX_RETRIES = 2;
+
+        function wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function logAutoCrop(level, code, details = {}) {
+            const logger = console[level] || console.log;
+            logger(`[auto-crop:${code}]`, {
+                status: autoCropStatus,
+                ...details
+            });
+        }
+
+        function setAutoCropBanner(message, type = 'info') {
+            const banner = document.getElementById('auto-crop-banner');
+            if (!banner) return;
+            banner.className = `alert-banner ${type}`;
+            banner.innerHTML = message;
+            banner.style.display = 'block';
+        }
+
+        function hideAutoCropBanner() {
+            const banner = document.getElementById('auto-crop-banner');
+            if (!banner) return;
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+            banner.className = 'alert-banner';
+        }
+
+        function updateAutoCropButtonState() {
+            const btn = document.getElementById('btn-auto-crop');
+            if (!btn) return;
+            const hasImage = Boolean(rawImage.src);
+            btn.disabled = !hasImage || isAutoCropRunning;
+            if (isAutoCropRunning) {
+                btn.innerHTML = '⏳ Analyse en cours...';
+            } else if (window.cvReady) {
+                btn.innerHTML = '🪄 Cadrage Automatique';
+            } else {
+                btn.innerHTML = '🪄 Cadrage de secours';
+            }
+        }
+        window.updateAutoCropButtonState = updateAutoCropButtonState;
+
+        function getNormalizedCornersForFallback() {
+            const w = sourceCanvas.width;
+            const h = sourceCanvas.height;
+            const padX = w * 0.05;
+            const padY = h * 0.05;
+            return [
+                { x: padX, y: padY },
+                { x: w - padX, y: padY },
+                { x: w - padX, y: h - padY },
+                { x: padX, y: h - padY }
+            ];
+        }
+
+        function tryNormalizeOrientationBitmap(file) {
+            if (!window.createImageBitmap) return Promise.resolve(null);
+            return createImageBitmap(file, { imageOrientation: 'from-image' }).then(bitmap => bitmap).catch((err) => {
+                logAutoCrop('warn', 'E_IMAGEBITMAP_EXIF', { message: err?.message || 'unknown' });
+                return null;
+            });
+        }
 
         // --- GESTION DES VUES ---
         function goToStep(stepIndex) {
@@ -471,16 +544,18 @@
         inputCamera.addEventListener('change', (e) => { if (e.target.files.length > 0) loadFile(e.target.files[0]); });
         inputGallery.addEventListener('change', (e) => { if (e.target.files.length > 0) loadFile(e.target.files[0]); });
 
-        function loadFile(file) {
+        async function loadFile(file) {
             if (!file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const tempImg = new Image();
-                tempImg.onload = () => {
-                    const maxDim = 1600; 
-                    let w = tempImg.width;
-                    let h = tempImg.height;
-                    
+            try {
+                hideAutoCropBanner();
+                const maxDim = 1600;
+                const compressCanvas = document.createElement('canvas');
+                const cCtx = compressCanvas.getContext('2d');
+
+                const normalizedBitmap = await tryNormalizeOrientationBitmap(file);
+                if (normalizedBitmap) {
+                    let w = normalizedBitmap.width;
+                    let h = normalizedBitmap.height;
                     if (w > maxDim || h > maxDim) {
                         if (w > h) {
                             h = Math.round((h * maxDim) / w);
@@ -490,23 +565,50 @@
                             h = maxDim;
                         }
                     }
-
-                    const compressCanvas = document.createElement('canvas');
                     compressCanvas.width = w;
                     compressCanvas.height = h;
-                    const cCtx = compressCanvas.getContext('2d');
+                    cCtx.drawImage(normalizedBitmap, 0, 0, w, h);
+                    normalizedBitmap.close();
+                } else {
+                    const reader = new FileReader();
+                    const imageDataUrl = await new Promise((resolve, reject) => {
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    const tempImg = new Image();
+                    await new Promise((resolve, reject) => {
+                        tempImg.onload = resolve;
+                        tempImg.onerror = reject;
+                        tempImg.src = imageDataUrl;
+                    });
+                    let w = tempImg.width;
+                    let h = tempImg.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+                    compressCanvas.width = w;
+                    compressCanvas.height = h;
                     cCtx.drawImage(tempImg, 0, 0, w, h);
+                }
 
-                    rawImage = new Image();
-                    rawImage.onload = () => {
-                        analyzeSourceImage();
-                        goToStep(2);
-                    };
-                    rawImage.src = compressCanvas.toDataURL('image/jpeg', 0.88);
+                rawImage = new Image();
+                rawImage.onload = () => {
+                    analyzeSourceImage();
+                    goToStep(2);
+                    updateAutoCropButtonState();
                 };
-                tempImg.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                rawImage.src = compressCanvas.toDataURL('image/jpeg', 0.88);
+            } catch (e) {
+                setAutoCropBanner("⚠️ Impossible de charger cette image. Veuillez réessayer avec une autre photo.", 'info');
+                logAutoCrop('error', 'E_IMAGE_LOAD', { message: e?.message || 'unknown' });
+            }
         }
 
         // --- CONTRÔLE QUALITÉ SOURCE ---
@@ -562,52 +664,99 @@
             }
         }
 
-        // --- IA AUTO-CADRAGE (Architecture Fail-Safe) ---
-        function autoDetectFrame() {
-            if (!window.cvReady) return;
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
 
+        function orderCorners(points) {
+            const withSum = points.map(pt => ({ ...pt, sum: pt.x + pt.y, diff: pt.x - pt.y }));
+            const topLeft = withSum.reduce((best, pt) => pt.sum < best.sum ? pt : best, withSum[0]);
+            const bottomRight = withSum.reduce((best, pt) => pt.sum > best.sum ? pt : best, withSum[0]);
+            const topRight = withSum.reduce((best, pt) => pt.diff > best.diff ? pt : best, withSum[0]);
+            const bottomLeft = withSum.reduce((best, pt) => pt.diff < best.diff ? pt : best, withSum[0]);
+            return [
+                { x: topLeft.x, y: topLeft.y },
+                { x: topRight.x, y: topRight.y },
+                { x: bottomRight.x, y: bottomRight.y },
+                { x: bottomLeft.x, y: bottomLeft.y }
+            ];
+        }
+
+        function polygonArea(points) {
+            let area = 0;
+            for (let i = 0; i < points.length; i++) {
+                const j = (i + 1) % points.length;
+                area += points[i].x * points[j].y - points[j].x * points[i].y;
+            }
+            return Math.abs(area / 2);
+        }
+
+        // Contrat auto-crop IA:
+        // Entrée: 4 points ({x,y}) potentiellement bruités/hors limites.
+        // Sortie: 4 points ordonnés TL/TR/BR/BL, bornés à l'image, ou null si invalide.
+        function normalizeAndValidateCorners(points, imgW, imgH) {
+            if (!Array.isArray(points) || points.length !== 4) return null;
+            const normalized = points.map((pt) => {
+                const x = Number(pt?.x);
+                const y = Number(pt?.y);
+                if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+                return { x: clamp(x, 0, imgW), y: clamp(y, 0, imgH) };
+            });
+            if (normalized.some(pt => !pt)) return null;
+            const ordered = orderCorners(normalized);
+            const minArea = (imgW * imgH) * 0.01;
+            if (polygonArea(ordered) < minArea) return null;
+            const topW = Math.hypot(ordered[1].x - ordered[0].x, ordered[1].y - ordered[0].y);
+            const rightH = Math.hypot(ordered[2].x - ordered[1].x, ordered[2].y - ordered[1].y);
+            if (topW < 20 || rightH < 20) return null;
+            return ordered;
+        }
+
+        function applyAutoCropFallback(errorCode, userMessage, details = {}) {
+            autoCropStatus = 'fallback';
+            resetPointsFallback();
+            requestAnimationFrame(drawSource);
+            setAutoCropBanner(userMessage, 'info');
+            logAutoCrop('warn', errorCode, details);
+        }
+
+        function detectFrameAttempt(cannyLow, cannyHigh) {
             let src, gray, edges, contours, hierarchy, bestContour;
             try {
-                // Diminution stricte de la charge mémoire
                 const maxDim = 500;
                 let scale = Math.max(rawImage.width / maxDim, rawImage.height / maxDim);
                 if (scale < 1) scale = 1;
-                
-                let rw = Math.round(rawImage.width / scale);
-                let rh = Math.round(rawImage.height / scale);
-                
-                let tmpCanvas = document.createElement('canvas');
-                tmpCanvas.width = rw; tmpCanvas.height = rh;
-                let tmpCtx = tmpCanvas.getContext('2d');
+                const rw = Math.round(rawImage.width / scale);
+                const rh = Math.round(rawImage.height / scale);
+
+                const tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = rw;
+                tmpCanvas.height = rh;
+                const tmpCtx = tmpCanvas.getContext('2d');
                 tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
-                
+
                 src = cv.imread(tmpCanvas);
                 gray = new cv.Mat();
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-                
                 edges = new cv.Mat();
-                cv.Canny(gray, edges, 30, 100);
-                
-                let M = cv.Mat.ones(3, 3, cv.CV_8U);
-                cv.dilate(edges, edges, M, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
-                M.delete();
-                
                 contours = new cv.MatVector();
                 hierarchy = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+                cv.Canny(gray, edges, cannyLow, cannyHigh);
+
+                const kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+                cv.dilate(edges, edges, kernel, new cv.Point(-1, -1), 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+                kernel.delete();
                 cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-                
+
                 let maxArea = 0;
                 for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-                    
+                    const cnt = contours.get(i);
+                    const area = cv.contourArea(cnt);
                     if (area > (rw * rh * 0.1)) {
-                        let perimeter = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        // Tolérance relâchée (5%) pour éviter les erreurs
+                        const perimeter = cv.arcLength(cnt, true);
+                        const approx = new cv.Mat();
                         cv.approxPolyDP(cnt, approx, 0.05 * perimeter, true);
-                        
                         if (approx.rows === 4 && area > maxArea) {
                             maxArea = area;
                             if (bestContour) bestContour.delete();
@@ -615,30 +764,97 @@
                         }
                         approx.delete();
                     }
+                    cnt.delete();
                 }
-                
-                if (bestContour) {
-                    let pts = [];
-                    for (let i = 0; i < 4; i++) {
-                        pts.push({ x: bestContour.data32S[i * 2] * scale, y: bestContour.data32S[i * 2 + 1] * scale });
-                    }
-                    pts.sort((a,b) => a.y - b.y);
-                    let top = [pts[0], pts[1]].sort((a,b) => a.x - b.x);
-                    let bottom = [pts[2], pts[3]].sort((a,b) => b.x - a.x);
-                    corners = [top[0], top[1], bottom[0], bottom[1]];
-                } else {
-                    // Poka-Yoke : Action transparente sans message d'erreur bloquant
-                    resetPointsFallback();
+
+                if (!bestContour) return null;
+                const points = [];
+                for (let i = 0; i < 4; i++) {
+                    points.push({
+                        x: bestContour.data32S[i * 2] * scale,
+                        y: bestContour.data32S[i * 2 + 1] * scale
+                    });
                 }
-                requestAnimationFrame(drawSource);
-            } catch (e) {
-                console.error("OpenCV Fail-Safe déclenché:", e);
-                resetPointsFallback();
-                requestAnimationFrame(drawSource);
+                return normalizeAndValidateCorners(points, sourceCanvas.width, sourceCanvas.height);
             } finally {
-                if (src) src.delete(); if (gray) gray.delete(); if (edges) edges.delete();
-                if (contours) contours.delete(); if (hierarchy) hierarchy.delete();
+                if (src) src.delete();
+                if (gray) gray.delete();
+                if (edges) edges.delete();
+                if (contours) contours.delete();
+                if (hierarchy) hierarchy.delete();
                 if (bestContour) bestContour.delete();
+            }
+        }
+
+        // --- IA AUTO-CADRAGE (Architecture Fail-Safe) ---
+        async function autoDetectFrame() {
+            if (isAutoCropRunning) return;
+            if (!rawImage.src || !sourceCanvas.width || !sourceCanvas.height) {
+                setAutoCropBanner("⚠️ Impossible de lancer le cadrage automatique: aucune image valide n'est chargée.", 'info');
+                return;
+            }
+
+            isAutoCropRunning = true;
+            autoCropStatus = 'running';
+            updateAutoCropButtonState();
+
+            try {
+                if (!window.cvReady) {
+                    applyAutoCropFallback('E_CV_NOT_READY', "ℹ️ L'IA est indisponible pour le moment. Un cadrage de secours a été appliqué.");
+                    return;
+                }
+
+                const thresholdsByAttempt = [
+                    [30, 100],
+                    [20, 90],
+                    [45, 140]
+                ];
+                let detectedCorners = null;
+                let lastError = null;
+
+                for (let attempt = 0; attempt <= AUTO_CROP_MAX_RETRIES; attempt++) {
+                    const [low, high] = thresholdsByAttempt[attempt] || thresholdsByAttempt[0];
+                    try {
+                        if (AUTO_CROP_RETRY_DELAYS_MS[attempt] > 0) {
+                            await wait(AUTO_CROP_RETRY_DELAYS_MS[attempt]);
+                        }
+                        detectedCorners = detectFrameAttempt(low, high);
+                        if (detectedCorners) {
+                            break;
+                        }
+                        logAutoCrop('warn', 'E_EMPTY_OR_INVALID_DETECTION', { attempt, low, high });
+                    } catch (err) {
+                        lastError = err;
+                        logAutoCrop('warn', 'E_DETECTION_EXCEPTION', { attempt, message: err?.message || 'unknown' });
+                    }
+                }
+
+                if (!detectedCorners) {
+                    applyAutoCropFallback(
+                        lastError ? 'E_AUTO_CROP_RUNTIME' : 'E_AUTO_CROP_NO_VALID_BOX',
+                        "ℹ️ Le cadrage automatique n'a pas trouvé de zone fiable. Un cadre centré a été appliqué, vous pouvez l'ajuster.",
+                        { hasError: Boolean(lastError) }
+                    );
+                    return;
+                }
+
+                corners = detectedCorners;
+                autoCropStatus = 'success';
+                hideAutoCropBanner();
+                requestAnimationFrame(drawSource);
+                logAutoCrop('log', 'AUTO_CROP_SUCCESS', {
+                    width: sourceCanvas.width,
+                    height: sourceCanvas.height
+                });
+            } catch (e) {
+                applyAutoCropFallback(
+                    'E_AUTO_CROP_FATAL',
+                    "ℹ️ Une erreur est survenue pendant le cadrage IA. Un cadre de secours a été appliqué.",
+                    { message: e?.message || 'unknown' }
+                );
+            } finally {
+                isAutoCropRunning = false;
+                updateAutoCropButtonState();
             }
         }
 
@@ -647,20 +863,13 @@
             sourceCanvas.width = rawImage.width;
             sourceCanvas.height = rawImage.height;
             resetPointsFallback();
+            hideAutoCropBanner();
             requestAnimationFrame(drawSource);
+            updateAutoCropButtonState();
         }
 
         function resetPointsFallback() {
-            const w = sourceCanvas.width;
-            const h = sourceCanvas.height;
-            const padX = w * 0.05;
-            const padY = h * 0.05;
-            corners = [
-                { x: padX, y: padY },
-                { x: w - padX, y: padY },
-                { x: w - padX, y: h - padY },
-                { x: padX, y: h - padY }
-            ];
+            corners = getNormalizedCornersForFallback();
         }
 
         function drawSource() {
