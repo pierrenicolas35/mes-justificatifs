@@ -445,8 +445,11 @@
         const lCtx = loupe.getContext('2d');
         const LOUPE_SIZE = 110;
         const ZOOM_MULT = 2;
-        const AUTO_CROP_RETRY_DELAYS_MS = [0, 120, 250];
-        const AUTO_CROP_MAX_RETRIES = 2;
+        const AUTO_CROP_ATTEMPTS = [
+            { cannyLow: 30, cannyHigh: 100, delayMs: 0 },
+            { cannyLow: 20, cannyHigh: 90, delayMs: 120 },
+            { cannyLow: 45, cannyHigh: 140, delayMs: 250 }
+        ];
 
         function wait(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -464,7 +467,7 @@
             const banner = document.getElementById('auto-crop-banner');
             if (!banner) return;
             banner.className = `alert-banner ${type}`;
-            banner.innerHTML = message;
+            banner.textContent = message;
             banner.style.display = 'block';
         }
 
@@ -479,7 +482,7 @@
         function updateAutoCropButtonState() {
             const btn = document.getElementById('btn-auto-crop');
             if (!btn) return;
-            const hasImage = Boolean(rawImage.src);
+            const hasImage = rawImage.naturalWidth > 0 && rawImage.naturalHeight > 0;
             btn.disabled = !hasImage || isAutoCropRunning;
             if (isAutoCropRunning) {
                 btn.innerHTML = '⏳ Analyse en cours...';
@@ -506,7 +509,7 @@
 
         function tryNormalizeOrientationBitmap(file) {
             if (!window.createImageBitmap) return Promise.resolve(null);
-            return createImageBitmap(file, { imageOrientation: 'from-image' }).then(bitmap => bitmap).catch((err) => {
+            return createImageBitmap(file, { imageOrientation: 'from-image' }).catch((err) => {
                 logAutoCrop('warn', 'E_IMAGEBITMAP_EXIF', { message: err?.message || 'unknown' });
                 return null;
             });
@@ -605,9 +608,9 @@
                     updateAutoCropButtonState();
                 };
                 rawImage.src = compressCanvas.toDataURL('image/jpeg', 0.88);
-            } catch (e) {
-                setAutoCropBanner("⚠️ Impossible de charger cette image. Veuillez réessayer avec une autre photo.", 'info');
-                logAutoCrop('error', 'E_IMAGE_LOAD', { message: e?.message || 'unknown' });
+            } catch (loadError) {
+                setAutoCropBanner("⚠️ Impossible de charger cette image. Veuillez réessayer avec une autre photo.", 'error');
+                logAutoCrop('error', 'E_IMAGE_LOAD', { message: loadError?.message || 'unknown' });
             }
         }
 
@@ -764,7 +767,6 @@
                         }
                         approx.delete();
                     }
-                    cnt.delete();
                 }
 
                 if (!bestContour) return null;
@@ -789,8 +791,8 @@
         // --- IA AUTO-CADRAGE (Architecture Fail-Safe) ---
         async function autoDetectFrame() {
             if (isAutoCropRunning) return;
-            if (!rawImage.src || !sourceCanvas.width || !sourceCanvas.height) {
-                setAutoCropBanner("⚠️ Impossible de lancer le cadrage automatique: aucune image valide n'est chargée.", 'info');
+            if (rawImage.naturalWidth <= 0 || rawImage.naturalHeight <= 0 || !sourceCanvas.width || !sourceCanvas.height) {
+                setAutoCropBanner("⚠️ Impossible de lancer le cadrage automatique: aucune image valide n'est chargée.", 'error');
                 return;
             }
 
@@ -804,25 +806,20 @@
                     return;
                 }
 
-                const thresholdsByAttempt = [
-                    [30, 100],
-                    [20, 90],
-                    [45, 140]
-                ];
                 let detectedCorners = null;
                 let lastError = null;
 
-                for (let attempt = 0; attempt <= AUTO_CROP_MAX_RETRIES; attempt++) {
-                    const [low, high] = thresholdsByAttempt[attempt] || thresholdsByAttempt[0];
+                for (let attempt = 0; attempt < AUTO_CROP_ATTEMPTS.length; attempt++) {
+                    const config = AUTO_CROP_ATTEMPTS[attempt];
                     try {
-                        if (AUTO_CROP_RETRY_DELAYS_MS[attempt] > 0) {
-                            await wait(AUTO_CROP_RETRY_DELAYS_MS[attempt]);
+                        if (config.delayMs > 0) {
+                            await wait(config.delayMs);
                         }
-                        detectedCorners = detectFrameAttempt(low, high);
+                        detectedCorners = detectFrameAttempt(config.cannyLow, config.cannyHigh);
                         if (detectedCorners) {
                             break;
                         }
-                        logAutoCrop('warn', 'E_EMPTY_OR_INVALID_DETECTION', { attempt, low, high });
+                        logAutoCrop('warn', 'E_EMPTY_OR_INVALID_DETECTION', { attempt, low: config.cannyLow, high: config.cannyHigh });
                     } catch (err) {
                         lastError = err;
                         logAutoCrop('warn', 'E_DETECTION_EXCEPTION', { attempt, message: err?.message || 'unknown' });
@@ -842,7 +839,7 @@
                 autoCropStatus = 'success';
                 hideAutoCropBanner();
                 requestAnimationFrame(drawSource);
-                logAutoCrop('log', 'AUTO_CROP_SUCCESS', {
+                logAutoCrop('info', 'AUTO_CROP_SUCCESS', {
                     width: sourceCanvas.width,
                     height: sourceCanvas.height
                 });
