@@ -452,6 +452,8 @@
         ];
         const AUTO_CROP_MIN_AREA_RATIO = 0.006;
         const AUTO_CROP_MIN_EDGE_PX = 14;
+        const AUTO_CROP_HEURISTIC_EDGE_THRESHOLD = 55;
+        const AUTO_CROP_HEURISTIC_MIN_HIT_RATIO = 0.01;
 
         function wait(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -847,7 +849,7 @@
                     const gx = Math.abs(lum(idxR) - lum(idxL));
                     const gy = Math.abs(lum(idxD) - lum(idxU));
                     const mag = gx + gy;
-                    if (mag > 55) {
+                    if (mag > AUTO_CROP_HEURISTIC_EDGE_THRESHOLD) {
                         hits++;
                         if (x < minX) minX = x;
                         if (y < minY) minY = y;
@@ -857,7 +859,7 @@
                 }
             }
 
-            if (hits < (w * h * 0.01)) return null;
+            if (hits < (w * h * AUTO_CROP_HEURISTIC_MIN_HIT_RATIO)) return null;
             if (maxX <= minX || maxY <= minY) return null;
             const padX = Math.round((maxX - minX) * 0.08);
             const padY = Math.round((maxY - minY) * 0.08);
@@ -944,7 +946,7 @@
                     logAutoCrop('warn', 'W_BBOX_CLAMPED', normalized.details);
                 }
                 if (normalized.details?.repaired) {
-                    logAutoCrop('info', 'W_BBOX_REPAIRED', normalized.details);
+                    logAutoCrop('info', 'I_BBOX_REPAIRED', normalized.details);
                 }
                 return normalized.corners;
             } finally {
