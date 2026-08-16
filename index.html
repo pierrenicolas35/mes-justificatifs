@@ -268,7 +268,7 @@
 
     <!-- ================= VUE 1 : CHOIX SOURCE ================= -->
     <div id="step-1" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 1 sur 5 : Déposez votre document</div>
 
         <div class="panel" style="margin-top: auto; margin-bottom: auto;">
@@ -291,7 +291,7 @@
 
     <!-- ================= VUE 2 : RECADRAGE ================= -->
     <div id="step-2" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 2 sur 5 : Cadrez le document</div>
 
         <div id="source-alert-banner" class="alert-banner">
@@ -330,7 +330,7 @@
 
     <!-- ================= VUE 3 : CONTRASTE & NETTOYAGE AUTO (IA) ================= -->
     <div id="step-3" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 3 sur 5 : Clarté & Nettoyage</div>
 
         <div id="result-alert-banner" class="alert-banner"></div>
@@ -372,7 +372,7 @@
 
     <!-- ================= VUE 4 : GESTION MULTI-PAGES ================= -->
     <div id="step-4" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 4 sur 5 : Vos pages numérisées</div>
 
         <div class="panel">
@@ -392,7 +392,7 @@
 
     <!-- ================= VUE 5 : EXPORT & ENVOI ================= -->
     <div id="step-5" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
+        <div class="header"><h2>Mes justificatifs</h2></div>
         <div class="stepper-bar">Étape 5 sur 5 : Finalisation</div>
 
         <div class="panel">
@@ -1551,6 +1551,17 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
+
+        // Privacy banner — single source of truth injected into every view header
+        (function() {
+            const bannerText = '🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.';
+            document.querySelectorAll('.header').forEach(function(header) {
+                const span = document.createElement('span');
+                span.className = 'privacy-banner';
+                span.textContent = bannerText;
+                header.appendChild(span);
+            });
+        })();
     </script>
 </body>
 </html>
