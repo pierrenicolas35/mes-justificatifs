@@ -77,6 +77,12 @@
         /* --- EN-TÊTE COMMUN --- */
         .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
+        .privacy-banner {
+            display: inline-block; background: #eafaf1; color: #1a7a3a;
+            border: 1px solid #a9dfbf; border-radius: 8px;
+            padding: 5px 12px; font-size: 0.8rem; font-weight: 600;
+            line-height: 1.4; margin-top: 4px;
+        }
         
         .stepper-bar {
             background: var(--panel); padding: 12px 15px; border-radius: 12px;
@@ -262,7 +268,7 @@
 
     <!-- ================= VUE 1 : CHOIX SOURCE ================= -->
     <div id="step-1" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
         <div class="stepper-bar">Étape 1 sur 5 : Déposez votre document</div>
 
         <div class="panel" style="margin-top: auto; margin-bottom: auto;">
@@ -285,7 +291,7 @@
 
     <!-- ================= VUE 2 : RECADRAGE ================= -->
     <div id="step-2" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
         <div class="stepper-bar">Étape 2 sur 5 : Cadrez le document</div>
 
         <div id="source-alert-banner" class="alert-banner">
@@ -324,7 +330,7 @@
 
     <!-- ================= VUE 3 : CONTRASTE & NETTOYAGE AUTO (IA) ================= -->
     <div id="step-3" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
         <div class="stepper-bar">Étape 3 sur 5 : Clarté & Nettoyage</div>
 
         <div id="result-alert-banner" class="alert-banner"></div>
@@ -366,7 +372,7 @@
 
     <!-- ================= VUE 4 : GESTION MULTI-PAGES ================= -->
     <div id="step-4" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
         <div class="stepper-bar">Étape 4 sur 5 : Vos pages numérisées</div>
 
         <div class="panel">
@@ -386,7 +392,7 @@
 
     <!-- ================= VUE 5 : EXPORT & ENVOI ================= -->
     <div id="step-5" class="app-view">
-        <div class="header"><h2>Mes justificatifs</h2></div>
+        <div class="header"><h2>Mes justificatifs</h2><span class="privacy-banner">🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.</span></div>
         <div class="stepper-bar">Étape 5 sur 5 : Finalisation</div>
 
         <div class="panel">
