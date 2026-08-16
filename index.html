@@ -77,6 +77,12 @@
         /* --- EN-TÊTE COMMUN --- */
         .header { text-align: center; margin-bottom: 15px; width: 100%; flex-shrink: 0; }
         .header h2 { margin: 0 0 6px 0; font-size: 1.35rem; font-weight: 800; color: var(--primary); }
+        .privacy-banner {
+            display: inline-block; background: #eafaf1; color: #1a7a3a;
+            border: 1px solid #a9dfbf; border-radius: 8px;
+            padding: 5px 12px; font-size: 0.8rem; font-weight: 600;
+            line-height: 1.4; margin-top: 4px;
+        }
         
         .stepper-bar {
             background: var(--panel); padding: 12px 15px; border-radius: 12px;
@@ -1545,6 +1551,17 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
+
+        // Privacy banner — single source of truth injected into every view header
+        (function() {
+            const bannerText = '🛡️ Confidentialité garantie : vos justificatifs sont analysés uniquement sur votre appareil, sans envoi en ligne.';
+            document.querySelectorAll('.header').forEach(function(header) {
+                const span = document.createElement('span');
+                span.className = 'privacy-banner';
+                span.textContent = bannerText;
+                header.appendChild(span);
+            });
+        })();
     </script>
 </body>
 </html>
