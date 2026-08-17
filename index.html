@@ -691,11 +691,16 @@
         }
 
         function orderCorners(points) {
+            // Tri déterministe: sum croissant → TL/BR, diff décroissant → TR/BL
+            // En cas d'égalité de sum, on départage par diff (croissant pour TL, décroissant pour BR)
+            // En cas d'égalité de diff, on départage par sum (croissant pour TR, décroissant pour BL)
             const withSum = points.map(pt => ({ ...pt, sum: pt.x + pt.y, diff: pt.x - pt.y }));
-            const topLeft = withSum.reduce((best, pt) => pt.sum < best.sum ? pt : best, withSum[0]);
-            const bottomRight = withSum.reduce((best, pt) => pt.sum > best.sum ? pt : best, withSum[0]);
-            const topRight = withSum.reduce((best, pt) => pt.diff > best.diff ? pt : best, withSum[0]);
-            const bottomLeft = withSum.reduce((best, pt) => pt.diff < best.diff ? pt : best, withSum[0]);
+            const sorted = [...withSum].sort((a, b) => a.sum !== b.sum ? a.sum - b.sum : a.diff - b.diff);
+            const topLeft = sorted[0];
+            const bottomRight = sorted[sorted.length - 1];
+            const byDiff = [...withSum].sort((a, b) => a.diff !== b.diff ? b.diff - a.diff : a.sum - b.sum);
+            const topRight = byDiff[0];
+            const bottomLeft = byDiff[byDiff.length - 1];
             return [
                 { x: topLeft.x, y: topLeft.y },
                 { x: topRight.x, y: topRight.y },
@@ -825,8 +830,9 @@
         }
 
         function getHeuristicDocumentFallback() {
-            const srcW = sourceCanvas.width;
-            const srcH = sourceCanvas.height;
+            // Utilise rawImage pour une analyse déterministe, sans overlay.
+            const srcW = rawImage.naturalWidth || rawImage.width;
+            const srcH = rawImage.naturalHeight || rawImage.height;
             if (!srcW || !srcH) return null;
             const maxDim = 280;
             const scale = Math.max(srcW / maxDim, srcH / maxDim, 1);
@@ -837,7 +843,7 @@
             probeCanvas.width = w;
             probeCanvas.height = h;
             const pCtx = probeCanvas.getContext('2d', { willReadFrequently: true });
-            pCtx.drawImage(sourceCanvas, 0, 0, w, h);
+            pCtx.drawImage(rawImage, 0, 0, w, h);
             const data = pCtx.getImageData(0, 0, w, h).data;
             const lum = (idx) => (0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
 
@@ -900,16 +906,20 @@
             let src, gray, edges, contours, hierarchy, bestContour;
             try {
                 const maxDim = 500;
-                let scale = Math.max(sourceCanvas.width / maxDim, sourceCanvas.height / maxDim);
+                // Utilise rawImage (pixels originaux sans overlay) pour un résultat déterministe.
+                // sourceCanvas contient l'overlay de recadrage qui pollue la détection Canny.
+                const srcW = rawImage.naturalWidth || rawImage.width;
+                const srcH = rawImage.naturalHeight || rawImage.height;
+                let scale = Math.max(srcW / maxDim, srcH / maxDim);
                 if (scale < 1) scale = 1;
-                const rw = Math.round(sourceCanvas.width / scale);
-                const rh = Math.round(sourceCanvas.height / scale);
+                const rw = Math.round(srcW / scale);
+                const rh = Math.round(srcH / scale);
 
                 const tmpCanvas = document.createElement('canvas');
                 tmpCanvas.width = rw;
                 tmpCanvas.height = rh;
                 const tmpCtx = tmpCanvas.getContext('2d');
-                tmpCtx.drawImage(sourceCanvas, 0, 0, rw, rh);
+                tmpCtx.drawImage(rawImage, 0, 0, rw, rh);
 
                 src = cv.imread(tmpCanvas);
                 gray = new cv.Mat();
@@ -950,7 +960,7 @@
                         y: bestContour.data32S[i * 2 + 1] * scale
                     });
                 }
-                const normalized = normalizeAndValidateCorners(points, sourceCanvas.width, sourceCanvas.height);
+                const normalized = normalizeAndValidateCorners(points, srcW, srcH);
                 if (!normalized.corners) {
                     logAutoCrop('warn', 'E_BBOX_REJECT', { reason: normalized.reason, ...normalized.details });
                     return null;
@@ -1003,6 +1013,7 @@
 
                 let detectedCorners = null;
                 let lastError = null;
+                let successAttempt = -1;
 
                 for (let attempt = 0; attempt < AUTO_CROP_ATTEMPTS.length; attempt++) {
                     const config = AUTO_CROP_ATTEMPTS[attempt];
@@ -1012,6 +1023,7 @@
                         }
                         detectedCorners = detectFrameAttempt(config.cannyLow, config.cannyHigh);
                         if (detectedCorners) {
+                            successAttempt = attempt;
                             break;
                         }
                         logAutoCrop('warn', 'E_EMPTY_OR_INVALID_DETECTION', { attempt, low: config.cannyLow, high: config.cannyHigh });
@@ -1029,15 +1041,16 @@
                         setAutoCropBanner("ℹ️ Cadrage automatique ajusté avec estimation robuste. Vérifiez le cadre puis ajustez si besoin.", 'info');
                         requestAnimationFrame(drawSource);
                         logAutoCrop('info', 'AUTO_CROP_HEURISTIC_FALLBACK', {
-                            width: sourceCanvas.width,
-                            height: sourceCanvas.height
+                            width: rawImage.naturalWidth || rawImage.width,
+                            height: rawImage.naturalHeight || rawImage.height,
+                            path: 'heuristic'
                         });
                         return;
                     }
                     applyAutoCropFallback(
                         lastError ? 'E_AUTO_CROP_RUNTIME' : 'E_AUTO_CROP_NO_VALID_BOX',
                         "ℹ️ Le cadrage automatique n'a pas trouvé de zone fiable. Un cadre centré a été appliqué, vous pouvez l'ajuster.",
-                        { hasError: Boolean(lastError) }
+                        { hasError: Boolean(lastError), path: 'centered_fallback' }
                     );
                     return;
                 }
@@ -1047,8 +1060,10 @@
                 hideAutoCropBanner();
                 requestAnimationFrame(drawSource);
                 logAutoCrop('info', 'AUTO_CROP_SUCCESS', {
-                    width: sourceCanvas.width,
-                    height: sourceCanvas.height
+                    width: rawImage.naturalWidth || rawImage.width,
+                    height: rawImage.naturalHeight || rawImage.height,
+                    path: 'cv_detected',
+                    attempt: successAttempt
                 });
             } catch (e) {
                 applyAutoCropFallback(
